@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+:root {
+  --color-draft: #6b7280;
+  --color-pending-review: #f59e0b;
+  --color-approved: #3b82f6;
+  --color-in-progress: #8b5cf6;
+  --color-done: #10b981;
+  --color-accepted: #059669;
+}
