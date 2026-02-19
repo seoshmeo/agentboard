@@ -6,7 +6,6 @@ import { healthRoutes } from './routes/health.js';
 import { projectRoutes } from './routes/projects.js';
 import { itemRoutes } from './routes/items.js';
 import { decisionRoutes } from './routes/decisions.js';
-import { templateRoutes } from './routes/template.js';
 import { wsRoutes } from './ws/index.js';
 
 const app = Fastify({ logger: true });
@@ -22,7 +21,6 @@ await app.register(healthRoutes);
 await app.register(projectRoutes);
 await app.register(itemRoutes);
 await app.register(decisionRoutes);
-await app.register(templateRoutes);
 await app.register(wsRoutes);
 
 const port = parseInt(process.env.PORT || '3000', 10);
