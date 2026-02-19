@@ -62,6 +62,8 @@ export function useItems(filters?: { status?: string; sprintTag?: string }) {
   return useQuery({
     queryKey: ['items', qs],
     queryFn: () => apiFetch<Item[]>(`/items${qs ? `?${qs}` : ''}`),
+    enabled: !!getApiKey(),
+    retry: false,
   });
 }
 

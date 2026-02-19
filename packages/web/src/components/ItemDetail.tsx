@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { X, ArrowRight, MessageSquare, GitBranch, BookOpen, AlertTriangle } from 'lucide-react';
-import { useItemContext, useTransition, useAddComment, useComments, useCreateItem } from '../api/client.js';
+import { useItemContext, useTransition, useAddComment, useComments } from '../api/client.js';
 import { DecisionLog } from './DecisionLog.js';
 import { cn, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '../lib/utils.js';
 import { getAvailableTransitions } from '@agentboard/shared';
 import type { Role, ItemStatus } from '@agentboard/shared';
-import ReactMarkdown from 'react-markdown';
 
 interface ItemDetailProps {
   itemId: string;
@@ -159,7 +158,7 @@ export function ItemDetail({ itemId, onClose }: ItemDetailProps) {
           <div className="px-5 py-4 border-b border-gray-800">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Description</h3>
             <div className="prose prose-invert prose-sm max-w-none text-gray-300">
-              <ReactMarkdown>{item.description}</ReactMarkdown>
+              <p className="whitespace-pre-wrap">{item.description}</p>
             </div>
           </div>
         )}
