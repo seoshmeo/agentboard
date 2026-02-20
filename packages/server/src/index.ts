@@ -9,6 +9,7 @@ import { decisionRoutes } from './routes/decisions.js';
 import { activityRoutes } from './routes/activity.js';
 import { chatRoutes } from './routes/chat.js';
 import { wsRoutes } from './ws/index.js';
+import { startAgentWorker } from './services/agent-worker.js';
 
 const app = Fastify({ logger: true });
 
@@ -33,6 +34,7 @@ const host = process.env.HOST || '0.0.0.0';
 try {
   await app.listen({ port, host });
   console.log(`AgentBoard server running on http://${host}:${port}`);
+  startAgentWorker();
 } catch (err) {
   app.log.error(err);
   process.exit(1);
