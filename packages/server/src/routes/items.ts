@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq, and, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db/connection.js';
-import { items, dependencies, comments, decisionLogs } from '../db/schema.js';
+import { items, dependencies, comments, decisionLogs, chatMessages } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { validateTransition, executeTransition } from '../services/state-machine.js';
 import { assembleContext } from '../services/context.js';
@@ -63,10 +63,6 @@ export async function itemRoutes(app: FastifyInstance) {
 
   // Create item
   app.post('/api/items', { preHandler: authMiddleware }, async (request, reply) => {
-    if (request.role !== 'pm') {
-      return reply.status(403).send({ error: 'Only PM role can create items' });
-    }
-
     const body = request.body as {
       title: string;
       description?: string;
@@ -154,6 +150,7 @@ export async function itemRoutes(app: FastifyInstance) {
     }
 
     // Delete related records first
+    db.delete(chatMessages).where(eq(chatMessages.itemId, id)).run();
     db.delete(decisionLogs).where(eq(decisionLogs.itemId, id)).run();
     db.delete(dependencies).where(eq(dependencies.itemId, id)).run();
     db.delete(dependencies).where(eq(dependencies.dependsOnItemId, id)).run();

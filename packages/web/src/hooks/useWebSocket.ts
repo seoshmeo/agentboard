@@ -23,9 +23,14 @@ export function useWebSocket() {
           }
           if (eventName?.startsWith('decision:')) {
             queryClient.invalidateQueries({ queryKey: ['decisionLogs'] });
+            queryClient.invalidateQueries({ queryKey: ['activity'] });
           }
           if (eventName?.startsWith('comment:')) {
             queryClient.invalidateQueries({ queryKey: ['comments'] });
+            queryClient.invalidateQueries({ queryKey: ['activity'] });
+          }
+          if (eventName?.startsWith('chat:')) {
+            queryClient.invalidateQueries({ queryKey: ['chat'] });
           }
         } catch {}
       };

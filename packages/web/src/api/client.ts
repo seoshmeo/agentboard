@@ -57,6 +57,23 @@ export async function createProject(data: { name: string; description?: string }
   return res.json();
 }
 
+export function useUpdateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; name?: string; description?: string; anthropicApiKey?: string; telegramBotToken?: string; telegramChatId?: string }) =>
+      apiFetch<Project>(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['project', vars.id] }),
+  });
+}
+
+export function useProjectApiKeys(projectId: string, enabled: boolean = false) {
+  return useQuery({
+    queryKey: ['projectApiKeys', projectId],
+    queryFn: () => apiFetch<import('@agentboard/shared').ApiKey[]>(`/projects/${projectId}/api-keys`),
+    enabled: !!projectId && enabled,
+  });
+}
+
 // Items
 export function useItems(filters?: { status?: string; sprintTag?: string }) {
   const params = new URLSearchParams();
@@ -168,6 +185,35 @@ export function useAddDependency() {
     mutationFn: ({ itemId, dependsOnItemId }: { itemId: string; dependsOnItemId: string }) =>
       apiFetch(`/items/${itemId}/dependencies`, { method: 'POST', body: JSON.stringify({ dependsOnItemId }) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['items'] }),
+  });
+}
+
+// Chat
+export function useChatMessages(itemId: string) {
+  return useQuery({
+    queryKey: ['chat', itemId],
+    queryFn: () => apiFetch<import('@agentboard/shared').ChatMessage[]>(`/items/${itemId}/chat`),
+    enabled: !!itemId,
+  });
+}
+
+export function useSendChatMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, content }: { itemId: string; content: string }) =>
+      apiFetch<{ userMessage: import('@agentboard/shared').ChatMessage; assistantMessage: import('@agentboard/shared').ChatMessage }>(
+        `/items/${itemId}/chat`, { method: 'POST', body: JSON.stringify({ content }) }
+      ),
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['chat', vars.itemId] }),
+  });
+}
+
+// Activity
+export function useActivityFeed(limit: number = 50) {
+  return useQuery({
+    queryKey: ['activity', limit],
+    queryFn: () => apiFetch<import('@agentboard/shared').ActivityEntry[]>(`/activity?limit=${limit}`),
+    enabled: !!getApiKey(),
   });
 }
 

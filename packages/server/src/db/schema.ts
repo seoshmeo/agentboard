@@ -5,6 +5,7 @@ export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
+  anthropicApiKey: text('anthropic_api_key'),
   telegramBotToken: text('telegram_bot_token'),
   telegramChatId: text('telegram_chat_id'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
@@ -57,6 +58,15 @@ export const decisionLogs = sqliteTable('decision_logs', {
 export const comments = sqliteTable('comments', {
   id: text('id').primaryKey(),
   itemId: text('item_id').notNull().references(() => items.id),
+  content: text('content').notNull(),
+  authorRole: text('author_role'),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+});
+
+export const chatMessages = sqliteTable('chat_messages', {
+  id: text('id').primaryKey(),
+  itemId: text('item_id').notNull().references(() => items.id),
+  role: text('role', { enum: ['user', 'assistant'] }).notNull(),
   content: text('content').notNull(),
   authorRole: text('author_role'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),

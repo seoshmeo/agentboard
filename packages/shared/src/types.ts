@@ -6,6 +6,7 @@ export interface Project {
   id: string;
   name: string;
   description?: string | null;
+  anthropicApiKey?: string | null;
   telegramBotToken?: string | null;
   telegramChatId?: string | null;
   createdAt?: string | null;
@@ -78,4 +79,23 @@ export interface ItemContext {
 export interface CreateProjectResponse {
   project: Project;
   apiKeys: ApiKey[];
+}
+
+export interface ActivityEntry {
+  type: 'comment' | 'decision';
+  id: string;
+  itemId: string;
+  itemTitle: string;
+  content: string;
+  role: string | null;
+  createdAt: string | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  itemId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  authorRole: string | null;
+  createdAt: string | null;
 }

@@ -39,6 +39,10 @@ export async function projectRoutes(app: FastifyInstance) {
 
     const project = db.select().from(projects).where(eq(projects.id, id)).get();
     if (!project) return reply.status(404).send({ error: 'Project not found' });
+    // Hide sensitive keys from non-human roles
+    if (request.role !== 'human') {
+      return { ...project, anthropicApiKey: project.anthropicApiKey ? '***configured***' : null };
+    }
     return project;
   });
 
@@ -52,6 +56,7 @@ export async function projectRoutes(app: FastifyInstance) {
     const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
     if (body.name !== undefined) updates.name = body.name;
     if (body.description !== undefined) updates.description = body.description;
+    if (body.anthropicApiKey !== undefined) updates.anthropicApiKey = body.anthropicApiKey;
     if (body.telegramBotToken !== undefined) updates.telegramBotToken = body.telegramBotToken;
     if (body.telegramChatId !== undefined) updates.telegramChatId = body.telegramChatId;
 

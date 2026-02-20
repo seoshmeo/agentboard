@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { X, ArrowRight, MessageSquare, GitBranch, BookOpen, AlertTriangle, Pencil, Trash2, Plus, Unlink } from 'lucide-react';
+import { X, ArrowRight, MessageSquare, GitBranch, BookOpen, AlertTriangle, Pencil, Trash2, Plus, Unlink, Bot } from 'lucide-react';
 import { useItemContext, useTransition, useAddComment, useComments, useUpdateItem, useDeleteItem, useAddDependency, useRemoveDependency } from '../api/client.js';
 import { DecisionLog } from './DecisionLog.js';
-import { cn, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '../lib/utils.js';
+import { ItemChat } from './ItemChat.js';
+import { cn, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS, ROLE_BADGE_COLORS, relativeTime } from '../lib/utils.js';
 import { getAvailableTransitions } from '@agentboard/shared';
 import type { Role, ItemStatus, Item } from '@agentboard/shared';
 
@@ -328,8 +329,12 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
               {commentsList.map(c => (
                 <div key={c.id} className="bg-gray-800 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-semibold uppercase text-gray-500">{c.authorRole}</span>
-                    <span className="text-[10px] text-gray-600">{c.createdAt}</span>
+                    {c.authorRole && (
+                      <span className={cn('text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-full border', ROLE_BADGE_COLORS[c.authorRole] || 'text-gray-500 border-gray-700')}>
+                        {c.authorRole === 'pm' ? 'PM' : c.authorRole === 'dev' ? 'Dev' : c.authorRole === 'human' ? 'Human' : c.authorRole}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-gray-600">{relativeTime(c.createdAt)}</span>
                   </div>
                   <p className="text-sm text-gray-300">{c.content}</p>
                 </div>
@@ -352,6 +357,15 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
               Send
             </button>
           </div>
+        </div>
+
+        {/* AI Chat */}
+        <div className="px-5 py-4 border-t border-gray-800">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Bot className="w-3.5 h-3.5" />
+            Chat with AI
+          </h3>
+          <ItemChat itemId={itemId} role={role} />
         </div>
       </div>
     </div>

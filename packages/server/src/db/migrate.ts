@@ -59,5 +59,21 @@ export function runMigrations() {
       author_role TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY,
+      item_id TEXT NOT NULL REFERENCES items(id),
+      role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+      content TEXT NOT NULL,
+      author_role TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
+
+  // Add anthropic_api_key column to projects (idempotent)
+  try {
+    sqlite.exec(`ALTER TABLE projects ADD COLUMN anthropic_api_key TEXT`);
+  } catch {
+    // Column already exists
+  }
 }

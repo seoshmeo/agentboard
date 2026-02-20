@@ -4,9 +4,12 @@ import { Board } from './components/Board.js';
 import { ItemDetail } from './components/ItemDetail.js';
 import { CreateItemForm } from './components/CreateItemForm.js';
 import { SprintFilter } from './components/SprintFilter.js';
+import { ProjectSelector } from './components/ProjectSelector.js';
+import { ProjectSettings } from './components/ProjectSettings.js';
+import { ActivityFeed } from './components/ActivityFeed.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
-import { useItems, useAuthMe, setApiKey, getStoredApiKey, clearApiKey, createProject } from './api/client.js';
-import { LogOut, Plus, Zap, KeyRound, User } from 'lucide-react';
+import { useItems, useAuthMe, useProject, setApiKey, getStoredApiKey, clearApiKey, createProject } from './api/client.js';
+import { LogOut, Plus, Zap, KeyRound, User, Activity } from 'lucide-react';
 import type { Role } from '@agentboard/shared';
 
 const ROLE_LABELS: Record<Role, string> = { pm: 'PM', dev: 'Dev', human: 'Human' };
@@ -23,6 +26,8 @@ export default function App() {
   const [sprintFilter, setSprintFilter] = useState<string>('');
   const [showSetup, setShowSetup] = useState(false);
   const [showCreateItem, setShowCreateItem] = useState(false);
+  const [showProjectSettings, setShowProjectSettings] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [setupResult, setSetupResult] = useState<any>(null);
   const [error, setError] = useState('');
@@ -32,6 +37,7 @@ export default function App() {
 
   const { data: authMe } = useAuthMe();
   const role = authMe?.role;
+  const { data: projectData } = useProject(authMe?.projectId || '');
   const { data: items, isError } = useItems(sprintFilter ? { sprintTag: sprintFilter } : undefined);
 
   useEffect(() => {
@@ -189,6 +195,12 @@ export default function App() {
         <div className="flex items-center gap-3">
           <Zap className="w-5 h-5 text-violet-400" />
           <h1 className="text-lg font-bold text-white tracking-tight">AgentBoard</h1>
+          {projectData && (
+            <ProjectSelector
+              projectName={projectData.name}
+              onClick={() => setShowProjectSettings(true)}
+            />
+          )}
           {role && (
             <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${ROLE_COLORS[role]}`}>
               {ROLE_LABELS[role]}
@@ -197,7 +209,7 @@ export default function App() {
         </div>
         <div className="flex items-center gap-3">
           <SprintFilter sprints={sprints} value={sprintFilter} onChange={setSprintFilter} />
-          {role === 'pm' && (
+          {role && (
             <button
               onClick={() => setShowCreateItem(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium rounded-lg transition-colors"
@@ -206,6 +218,13 @@ export default function App() {
               New Item
             </button>
           )}
+          <button
+            onClick={() => setShowActivity(prev => !prev)}
+            className={`p-2 transition-colors rounded-lg ${showActivity ? 'text-violet-400 bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+            title="Activity Feed"
+          >
+            <Activity className="w-4 h-4" />
+          </button>
           <button
             onClick={handleLogout}
             className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
@@ -216,13 +235,21 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-hidden">
-        <Board
-          items={items || []}
-          role={role}
-          onItemClick={(id) => setSelectedItemId(id)}
-        />
-      </main>
+      <div className="flex-1 flex overflow-hidden">
+        <main className="flex-1 overflow-hidden">
+          <Board
+            items={items || []}
+            role={role}
+            onItemClick={(id) => setSelectedItemId(id)}
+          />
+        </main>
+        {showActivity && (
+          <ActivityFeed
+            onItemClick={(id) => setSelectedItemId(id)}
+            onClose={() => setShowActivity(false)}
+          />
+        )}
+      </div>
 
       {selectedItemId && (
         <ItemDetail
@@ -235,6 +262,14 @@ export default function App() {
 
       {showCreateItem && (
         <CreateItemForm onClose={() => setShowCreateItem(false)} />
+      )}
+
+      {showProjectSettings && authMe?.projectId && (
+        <ProjectSettings
+          projectId={authMe.projectId}
+          role={role}
+          onClose={() => setShowProjectSettings(false)}
+        />
       )}
     </div>
   );
