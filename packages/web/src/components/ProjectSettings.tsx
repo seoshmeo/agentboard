@@ -19,7 +19,7 @@ const ROLE_COLORS: Record<Role, string> = {
 
 export function ProjectSettings({ projectId, role, onClose }: ProjectSettingsProps) {
   const { data: project } = useProject(projectId);
-  const { data: apiKeys } = useProjectApiKeys(projectId, role === 'human');
+  const { data: apiKeys } = useProjectApiKeys(projectId, true);
   const updateProject = useUpdateProject();
   const queryClient = useQueryClient();
 
@@ -148,8 +148,8 @@ export function ProjectSettings({ projectId, role, onClose }: ProjectSettingsPro
           )}
         </div>
 
-        {/* API Keys (human only) */}
-        {role === 'human' && apiKeys && (
+        {/* API Keys (all roles — allows switching back) */}
+        {apiKeys && (
           <div className="p-5 border-b border-gray-800">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
               <Key className="w-3.5 h-3.5" />

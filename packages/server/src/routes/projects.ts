@@ -74,8 +74,6 @@ export async function projectRoutes(app: FastifyInstance) {
   app.get('/api/projects/:id/api-keys', { preHandler: authMiddleware }, async (request, reply) => {
     const { id } = request.params as { id: string };
     if (request.projectId !== id) return reply.status(403).send({ error: 'Access denied' });
-    if (request.role !== 'human') return reply.status(403).send({ error: 'Only human role can view API keys' });
-
     return db.select().from(apiKeys).where(eq(apiKeys.projectId, id)).all();
   });
 
