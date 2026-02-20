@@ -19,6 +19,25 @@ export function clearApiKey() {
   localStorage.removeItem('agentboard_api_key');
 }
 
+// Multi-project support: store known project keys
+export function getSavedProjects(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem('agentboard_projects') || '{}');
+  } catch { return {}; }
+}
+
+export function saveProjectKey(projectId: string, key: string) {
+  const projects = getSavedProjects();
+  projects[projectId] = key;
+  localStorage.setItem('agentboard_projects', JSON.stringify(projects));
+}
+
+export function removeProjectKey(projectId: string) {
+  const projects = getSavedProjects();
+  delete projects[projectId];
+  localStorage.setItem('agentboard_projects', JSON.stringify(projects));
+}
+
 async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...opts,
@@ -71,6 +90,14 @@ export function useProjectApiKeys(projectId: string, enabled: boolean = false) {
     queryKey: ['projectApiKeys', projectId],
     queryFn: () => apiFetch<import('@agentboard/shared').ApiKey[]>(`/projects/${projectId}/api-keys`),
     enabled: !!projectId && enabled,
+  });
+}
+
+export function useAllProjects() {
+  return useQuery({
+    queryKey: ['allProjects'],
+    queryFn: () => apiFetch<{ id: string; name: string; createdAt: string | null }[]>('/projects'),
+    staleTime: 30000,
   });
 }
 

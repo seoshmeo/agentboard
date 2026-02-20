@@ -9,11 +9,11 @@ export interface TransitionDef {
 }
 
 export const TRANSITIONS: Record<string, TransitionDef> = {
-  submit_for_review: { from: 'draft', to: 'pending_review', roles: ['pm'] },
+  submit_for_review: { from: 'draft', to: 'pending_review', roles: ['pm', 'human'] },
   approve:           { from: 'pending_review', to: 'approved', roles: ['human'] },
   reject_review:     { from: 'pending_review', to: 'draft', roles: ['human'], requiresComment: true },
-  start_work:        { from: 'approved', to: 'in_progress', roles: ['dev'] },
-  complete:          { from: 'in_progress', to: 'done', roles: ['dev'], requiresDecisionLog: true },
+  start_work:        { from: 'approved', to: 'in_progress', roles: ['dev', 'human'] },
+  complete:          { from: 'in_progress', to: 'done', roles: ['dev', 'human'], requiresDecisionLog: true },
   accept:            { from: 'done', to: 'accepted', roles: ['human'] },
   reject_result:     { from: 'done', to: 'draft', roles: ['human'], requiresComment: true },
 };

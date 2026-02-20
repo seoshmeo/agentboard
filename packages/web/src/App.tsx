@@ -4,7 +4,7 @@ import { Board } from './components/Board.js';
 import { ItemDetail } from './components/ItemDetail.js';
 import { CreateItemForm } from './components/CreateItemForm.js';
 import { SprintFilter } from './components/SprintFilter.js';
-import { ProjectSelector } from './components/ProjectSelector.js';
+import { ProjectSwitcher } from './components/ProjectSwitcher.js';
 import { ProjectSettings } from './components/ProjectSettings.js';
 import { ActivityFeed } from './components/ActivityFeed.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
@@ -195,10 +195,11 @@ export default function App() {
         <div className="flex items-center gap-3">
           <Zap className="w-5 h-5 text-violet-400" />
           <h1 className="text-lg font-bold text-white tracking-tight">AgentBoard</h1>
-          {projectData && (
-            <ProjectSelector
-              projectName={projectData.name}
-              onClick={() => setShowProjectSettings(true)}
+          {projectData && authMe?.projectId && (
+            <ProjectSwitcher
+              currentProjectId={authMe.projectId}
+              currentProjectName={projectData.name}
+              onSettingsClick={() => setShowProjectSettings(true)}
             />
           )}
           {role && (

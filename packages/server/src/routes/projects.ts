@@ -32,6 +32,12 @@ export async function projectRoutes(app: FastifyInstance) {
     return { project, apiKeys: keys };
   });
 
+  // List all projects (for project switcher)
+  app.get('/api/projects', async () => {
+    return db.select({ id: projects.id, name: projects.name, createdAt: projects.createdAt })
+      .from(projects).all();
+  });
+
   // Get project
   app.get('/api/projects/:id', { preHandler: authMiddleware }, async (request, reply) => {
     const { id } = request.params as { id: string };

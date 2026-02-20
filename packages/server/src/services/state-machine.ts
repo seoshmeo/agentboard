@@ -29,7 +29,7 @@ export function validateTransition(
     return { ok: false, error: 'A comment is required for this transition' };
   }
 
-  if (transition.requiresDecisionLog) {
+  if (transition.requiresDecisionLog && role !== 'human') {
     const logs = db.select().from(decisionLogs).where(eq(decisionLogs.itemId, opts.itemId)).all();
     if (logs.length === 0) {
       return { ok: false, error: 'At least one decision log is required before marking as done' };
