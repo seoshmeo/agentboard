@@ -4,16 +4,17 @@ import { Column } from './Column.js';
 import { ItemCard } from './ItemCard.js';
 import { useTransition } from '../api/client.js';
 import { findTransition } from '@agentboard/shared';
-import type { Item, ItemStatus } from '@agentboard/shared';
+import type { Item, ItemStatus, Role } from '@agentboard/shared';
 
 const COLUMNS: ItemStatus[] = ['draft', 'pending_review', 'approved', 'in_progress', 'done', 'accepted'];
 
 interface BoardProps {
   items: Item[];
+  role?: Role;
   onItemClick: (id: string) => void;
 }
 
-export function Board({ items, onItemClick }: BoardProps) {
+export function Board({ items, role, onItemClick }: BoardProps) {
   const [activeItem, setActiveItem] = useState<Item | null>(null);
   const transition = useTransition();
 
@@ -34,6 +35,7 @@ export function Board({ items, onItemClick }: BoardProps) {
 
     const trans = findTransition(item.status as ItemStatus, targetStatus);
     if (!trans) return;
+    if (role && !trans.roles.includes(role)) return;
 
     transition.mutate({ id: itemId, to: targetStatus });
   }

@@ -21,6 +21,7 @@
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
     "@types/node-telegram-bot-api": "^0.64.0",
+    "@types/ws": "^8.18.1",
     "drizzle-kit": "^0.30.0",
     "tsx": "^4.0.0",
     "typescript": "^5.7.0"

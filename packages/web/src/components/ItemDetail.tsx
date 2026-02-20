@@ -1,25 +1,49 @@
 import { useState } from 'react';
-import { X, ArrowRight, MessageSquare, GitBranch, BookOpen, AlertTriangle } from 'lucide-react';
-import { useItemContext, useTransition, useAddComment, useComments } from '../api/client.js';
+import { X, ArrowRight, MessageSquare, GitBranch, BookOpen, AlertTriangle, Pencil, Trash2, Plus, Unlink } from 'lucide-react';
+import { useItemContext, useTransition, useAddComment, useComments, useUpdateItem, useDeleteItem, useAddDependency, useRemoveDependency } from '../api/client.js';
 import { DecisionLog } from './DecisionLog.js';
 import { cn, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '../lib/utils.js';
 import { getAvailableTransitions } from '@agentboard/shared';
-import type { Role, ItemStatus } from '@agentboard/shared';
+import type { Role, ItemStatus, Item } from '@agentboard/shared';
 
 interface ItemDetailProps {
   itemId: string;
+  role?: Role;
+  allItems: Item[];
   onClose: () => void;
 }
 
-export function ItemDetail({ itemId, onClose }: ItemDetailProps) {
+const TRANSITION_COLORS: Record<string, string> = {
+  pending_review: 'bg-amber-600 hover:bg-amber-500',
+  approved: 'bg-blue-600 hover:bg-blue-500',
+  in_progress: 'bg-violet-600 hover:bg-violet-500',
+  done: 'bg-emerald-600 hover:bg-emerald-500',
+  accepted: 'bg-green-700 hover:bg-green-600',
+  draft: 'bg-gray-600 hover:bg-gray-500',
+};
+
+export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps) {
   const { data: context, isLoading } = useItemContext(itemId);
   const { data: commentsList } = useComments(itemId);
   const transition = useTransition();
+  const updateItem = useUpdateItem();
+  const deleteItem = useDeleteItem();
+  const addDep = useAddDependency();
+  const removeDep = useRemoveDependency();
   const addComment = useAddComment();
+
   const [commentText, setCommentText] = useState('');
   const [transitionComment, setTransitionComment] = useState('');
   const [showTransitionComment, setShowTransitionComment] = useState(false);
   const [pendingTo, setPendingTo] = useState<ItemStatus | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editPriority, setEditPriority] = useState('medium');
+  const [editSprint, setEditSprint] = useState('');
+  const [editAssignee, setEditAssignee] = useState('');
+  const [showAddDep, setShowAddDep] = useState(false);
+  const [depItemId, setDepItemId] = useState('');
 
   if (isLoading || !context) {
     return (
@@ -30,14 +54,34 @@ export function ItemDetail({ itemId, onClose }: ItemDetailProps) {
   }
 
   const item = context.item;
-  // We don't know the user's role client-side easily, so show all possible transitions
-  const allRoles: Role[] = ['pm', 'dev', 'human'];
-  const transitions = allRoles.flatMap(role =>
-    getAvailableTransitions(item.status as ItemStatus, role).map(t => ({ ...t, forRole: role }))
-  );
+  const transitions = role ? getAvailableTransitions(item.status as ItemStatus, role) : [];
+
+  function startEdit() {
+    setEditTitle(item.title);
+    setEditDesc(item.description || '');
+    setEditPriority(item.priority);
+    setEditSprint(item.sprintTag || '');
+    setEditAssignee(item.assignedTo || '');
+    setEditing(true);
+  }
+
+  function saveEdit() {
+    updateItem.mutate({
+      id: itemId,
+      title: editTitle.trim(),
+      description: editDesc.trim(),
+      priority: editPriority,
+      sprintTag: editSprint.trim() || undefined,
+      assignedTo: editAssignee.trim() || undefined,
+    }, { onSuccess: () => setEditing(false) });
+  }
+
+  function handleDelete() {
+    if (!confirm('Delete this item?')) return;
+    deleteItem.mutate(itemId, { onSuccess: onClose });
+  }
 
   function handleTransition(to: ItemStatus) {
-    // Check if this transition requires a comment (rejections)
     const needsComment = to === 'draft' && (item.status === 'pending_review' || item.status === 'done');
     if (needsComment) {
       setPendingTo(to);
@@ -61,14 +105,17 @@ export function ItemDetail({ itemId, onClose }: ItemDetailProps) {
     setCommentText('');
   }
 
-  const TRANSITION_COLORS: Record<string, string> = {
-    pending_review: 'bg-amber-600 hover:bg-amber-500',
-    approved: 'bg-blue-600 hover:bg-blue-500',
-    in_progress: 'bg-violet-600 hover:bg-violet-500',
-    done: 'bg-emerald-600 hover:bg-emerald-500',
-    accepted: 'bg-green-700 hover:bg-green-600',
-    draft: 'bg-gray-600 hover:bg-gray-500',
-  };
+  function handleAddDep() {
+    if (!depItemId) return;
+    addDep.mutate({ itemId, dependsOnItemId: depItemId }, { onSuccess: () => { setShowAddDep(false); setDepItemId(''); } });
+  }
+
+  const canEdit = role === 'pm' || role === 'human';
+  const canDelete = role === 'human' && item.status === 'draft';
+
+  // Items available as dependencies (same project, not self, not already a dep)
+  const existingDepIds = new Set(context.dependencies.map(d => d.item.id));
+  const availableDeps = allItems.filter(i => i.id !== itemId && !existingDepIds.has(i.id));
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-12 px-4 overflow-y-auto" onClick={onClose}>
@@ -86,15 +133,31 @@ export function ItemDetail({ itemId, onClose }: ItemDetailProps) {
                 <span className="text-[10px] text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">{item.sprintTag}</span>
               )}
             </div>
-            <h2 className="text-lg font-semibold text-white">{item.title}</h2>
+            {editing ? (
+              <input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="w-full text-lg font-semibold bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white focus:outline-none focus:ring-2 focus:ring-violet-500" />
+            ) : (
+              <h2 className="text-lg font-semibold text-white">{item.title}</h2>
+            )}
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors p-1">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {canEdit && !editing && (
+              <button onClick={startEdit} className="text-gray-500 hover:text-violet-400 transition-colors p-1" title="Edit">
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
+            {canDelete && (
+              <button onClick={handleDelete} className="text-gray-500 hover:text-red-400 transition-colors p-1" title="Delete">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+            <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors p-1">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Transitions */}
-        {transitions.length > 0 && (
+        {transitions.length > 0 && !editing && (
           <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-2 flex-wrap">
             <span className="text-xs text-gray-500 mr-1">Actions:</span>
             {transitions.map((t, i) => (
@@ -109,7 +172,6 @@ export function ItemDetail({ itemId, onClose }: ItemDetailProps) {
               >
                 <ArrowRight className="w-3 h-3" />
                 {STATUS_LABELS[t.to]}
-                <span className="text-white/60 text-[10px]">({t.forRole})</span>
               </button>
             ))}
           </div>
@@ -130,19 +192,8 @@ export function ItemDetail({ itemId, onClose }: ItemDetailProps) {
               rows={2}
             />
             <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => { setShowTransitionComment(false); setPendingTo(null); }}
-                className="text-xs px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitTransitionWithComment}
-                className="text-xs px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg"
-                disabled={!transitionComment.trim()}
-              >
-                Reject
-              </button>
+              <button onClick={() => { setShowTransitionComment(false); setPendingTo(null); }} className="text-xs px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg">Cancel</button>
+              <button onClick={submitTransitionWithComment} className="text-xs px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg" disabled={!transitionComment.trim()}>Reject</button>
             </div>
           </div>
         )}
@@ -154,29 +205,73 @@ export function ItemDetail({ itemId, onClose }: ItemDetailProps) {
         )}
 
         {/* Description */}
-        {item.description && (
-          <div className="px-5 py-4 border-b border-gray-800">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Description</h3>
+        <div className="px-5 py-4 border-b border-gray-800">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Description</h3>
+          {editing ? (
+            <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={4} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" placeholder="Description..." />
+          ) : (
             <div className="prose prose-invert prose-sm max-w-none text-gray-300">
-              <p className="whitespace-pre-wrap">{item.description}</p>
+              {item.description ? <p className="whitespace-pre-wrap">{item.description}</p> : <p className="text-gray-600 italic">No description</p>}
+            </div>
+          )}
+        </div>
+
+        {/* Edit: priority, sprint, assignee */}
+        {editing && (
+          <div className="px-5 py-4 border-b border-gray-800 flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Priority</label>
+              <select value={editPriority} onChange={e => setEditPriority(e.target.value)} className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500">
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Sprint</label>
+              <input value={editSprint} onChange={e => setEditSprint(e.target.value)} placeholder="sprint-1" className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Assignee</label>
+              <input value={editAssignee} onChange={e => setEditAssignee(e.target.value)} placeholder="Name" className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
             </div>
           </div>
         )}
 
+        {/* Edit save/cancel buttons */}
+        {editing && (
+          <div className="px-5 py-3 border-b border-gray-800 flex justify-end gap-2">
+            <button onClick={() => setEditing(false)} className="text-xs px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg">Cancel</button>
+            <button onClick={saveEdit} disabled={!editTitle.trim() || updateItem.isPending} className="text-xs px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 text-white rounded-lg">
+              {updateItem.isPending ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        )}
+
         {/* Dependencies */}
-        {context.dependencies.length > 0 && (
-          <div className="px-5 py-4 border-b border-gray-800">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <GitBranch className="w-3.5 h-3.5" />
-              Dependencies
-            </h3>
-            <div className="space-y-2">
+        <div className="px-5 py-4 border-b border-gray-800">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <GitBranch className="w-3.5 h-3.5" />
+            Dependencies ({context.dependencies.length})
+          </h3>
+          {context.dependencies.length > 0 && (
+            <div className="space-y-2 mb-3">
               {context.dependencies.map(dep => (
                 <div key={dep.item.id} className="bg-gray-800 rounded-lg p-3">
                   <div className="flex items-center gap-2">
                     <span className={cn('w-2 h-2 rounded-full', STATUS_COLORS[dep.item.status])} />
-                    <span className="text-sm text-gray-200">{dep.item.title}</span>
+                    <span className="text-sm text-gray-200 flex-1">{dep.item.title}</span>
                     <span className="text-xs text-gray-500">{STATUS_LABELS[dep.item.status]}</span>
+                    {(role === 'pm' || role === 'human') && (
+                      <button
+                        onClick={() => removeDep.mutate({ itemId, dependsOnItemId: dep.item.id })}
+                        className="text-gray-600 hover:text-red-400 transition-colors"
+                        title="Remove dependency"
+                      >
+                        <Unlink className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                   {dep.decisionLogs.length > 0 && (
                     <div className="mt-2 pl-4 border-l-2 border-gray-700 space-y-1">
@@ -190,8 +285,28 @@ export function ItemDetail({ itemId, onClose }: ItemDetailProps) {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+          {context.dependencies.length === 0 && !showAddDep && (
+            <p className="text-xs text-gray-600 mb-2">No dependencies.</p>
+          )}
+          {showAddDep ? (
+            <div className="flex gap-2 items-end">
+              <select value={depItemId} onChange={e => setDepItemId(e.target.value)} className="flex-1 px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500">
+                <option value="">Select item...</option>
+                {availableDeps.map(i => (
+                  <option key={i.id} value={i.id}>{i.title} ({STATUS_LABELS[i.status]})</option>
+                ))}
+              </select>
+              <button onClick={handleAddDep} disabled={!depItemId} className="text-xs px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 text-white rounded">Add</button>
+              <button onClick={() => { setShowAddDep(false); setDepItemId(''); }} className="text-xs px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded">Cancel</button>
+            </div>
+          ) : role === 'pm' && (
+            <button onClick={() => setShowAddDep(true)} className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 transition-colors">
+              <Plus className="w-3.5 h-3.5" />
+              Add Dependency
+            </button>
+          )}
+        </div>
 
         {/* Decision Logs */}
         <div className="px-5 py-4 border-b border-gray-800">
@@ -199,7 +314,7 @@ export function ItemDetail({ itemId, onClose }: ItemDetailProps) {
             <BookOpen className="w-3.5 h-3.5" />
             Decision Logs
           </h3>
-          <DecisionLog itemId={itemId} logs={context.decisionLogs} />
+          <DecisionLog itemId={itemId} logs={context.decisionLogs} canAdd={role === 'dev'} />
         </div>
 
         {/* Comments */}

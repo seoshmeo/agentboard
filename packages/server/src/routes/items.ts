@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq, and, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db/connection.js';
-import { items, dependencies, comments } from '../db/schema.js';
+import { items, dependencies, comments, decisionLogs } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { validateTransition, executeTransition } from '../services/state-machine.js';
 import { assembleContext } from '../services/context.js';
@@ -29,6 +29,36 @@ export async function itemRoutes(app: FastifyInstance) {
     if (query.priority) result = result.filter(i => i.priority === query.priority);
 
     return result;
+  });
+
+  // Get next approved item for dev (MUST be before /:id to avoid route conflict)
+  app.get('/api/items/next', { preHandler: authMiddleware }, async (request, reply) => {
+    if (request.role !== 'dev') {
+      return reply.status(403).send({ error: 'Only dev role can use /items/next' });
+    }
+
+    const approved = db.select().from(items).where(
+      and(eq(items.projectId, request.projectId), eq(items.status, 'approved'))
+    ).all();
+
+    approved.sort((a, b) =>
+      (PRIORITY_ORDER[a.priority as keyof typeof PRIORITY_ORDER] ?? 2) -
+      (PRIORITY_ORDER[b.priority as keyof typeof PRIORITY_ORDER] ?? 2)
+    );
+
+    for (const item of approved) {
+      const deps = db.select().from(dependencies).where(eq(dependencies.itemId, item.id)).all();
+      if (deps.length === 0) return item;
+
+      const allMet = deps.every(d => {
+        const dep = db.select().from(items).where(eq(items.id, d.dependsOnItemId)).get();
+        return dep && (dep.status === 'done' || dep.status === 'accepted');
+      });
+
+      if (allMet) return item;
+    }
+
+    return reply.status(404).send({ error: 'No approved unblocked items available' });
   });
 
   // Create item
@@ -124,6 +154,7 @@ export async function itemRoutes(app: FastifyInstance) {
     }
 
     // Delete related records first
+    db.delete(decisionLogs).where(eq(decisionLogs.itemId, id)).run();
     db.delete(dependencies).where(eq(dependencies.itemId, id)).run();
     db.delete(dependencies).where(eq(dependencies.dependsOnItemId, id)).run();
     db.delete(comments).where(eq(comments.itemId, id)).run();
@@ -185,38 +216,6 @@ export async function itemRoutes(app: FastifyInstance) {
       return reply.status(403).send({ error: 'Access denied' });
     }
     return context;
-  });
-
-  // Get next approved item for dev
-  app.get('/api/items/next', { preHandler: authMiddleware }, async (request, reply) => {
-    if (request.role !== 'dev') {
-      return reply.status(403).send({ error: 'Only dev role can use /items/next' });
-    }
-
-    const approved = db.select().from(items).where(
-      and(eq(items.projectId, request.projectId), eq(items.status, 'approved'))
-    ).all();
-
-    // Sort by priority
-    approved.sort((a, b) =>
-      (PRIORITY_ORDER[a.priority as keyof typeof PRIORITY_ORDER] ?? 2) -
-      (PRIORITY_ORDER[b.priority as keyof typeof PRIORITY_ORDER] ?? 2)
-    );
-
-    // Find first unblocked
-    for (const item of approved) {
-      const deps = db.select().from(dependencies).where(eq(dependencies.itemId, item.id)).all();
-      if (deps.length === 0) return item;
-
-      const allMet = deps.every(d => {
-        const dep = db.select().from(items).where(eq(items.id, d.dependsOnItemId)).get();
-        return dep && (dep.status === 'done' || dep.status === 'accepted');
-      });
-
-      if (allMet) return item;
-    }
-
-    return reply.status(404).send({ error: 'No approved unblocked items available' });
   });
 
   // Add dependency

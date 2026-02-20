@@ -6,9 +6,10 @@ import type { DecisionLog as DecisionLogType } from '@agentboard/shared';
 interface DecisionLogProps {
   itemId: string;
   logs: DecisionLogType[];
+  canAdd?: boolean;
 }
 
-export function DecisionLog({ itemId, logs }: DecisionLogProps) {
+export function DecisionLog({ itemId, logs, canAdd = true }: DecisionLogProps) {
   const [showForm, setShowForm] = useState(false);
   const [context, setContext] = useState('');
   const [decision, setDecision] = useState('');
@@ -84,7 +85,7 @@ export function DecisionLog({ itemId, logs }: DecisionLogProps) {
         <p className="text-xs text-gray-600 mb-2">No decision logs yet.</p>
       )}
 
-      {showForm ? (
+      {canAdd && (showForm ? (
         <div className="bg-gray-800 rounded-lg p-3 space-y-2">
           <input
             value={context}
@@ -134,7 +135,7 @@ export function DecisionLog({ itemId, logs }: DecisionLogProps) {
           <Plus className="w-3.5 h-3.5" />
           Add Decision Log
         </button>
-      )}
+      ))}
     </div>
   );
 }

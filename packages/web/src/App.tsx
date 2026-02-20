@@ -2,10 +2,19 @@ import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Board } from './components/Board.js';
 import { ItemDetail } from './components/ItemDetail.js';
+import { CreateItemForm } from './components/CreateItemForm.js';
 import { SprintFilter } from './components/SprintFilter.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
-import { useItems, setApiKey, getStoredApiKey, clearApiKey, createProject } from './api/client.js';
-import { LogOut, Plus, Zap, KeyRound } from 'lucide-react';
+import { useItems, useAuthMe, setApiKey, getStoredApiKey, clearApiKey, createProject } from './api/client.js';
+import { LogOut, Plus, Zap, KeyRound, User } from 'lucide-react';
+import type { Role } from '@agentboard/shared';
+
+const ROLE_LABELS: Record<Role, string> = { pm: 'PM', dev: 'Dev', human: 'Human' };
+const ROLE_COLORS: Record<Role, string> = {
+  pm: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  dev: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
+  human: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+};
 
 export default function App() {
   const [apiKey, setKey] = useState(getStoredApiKey());
@@ -13,6 +22,7 @@ export default function App() {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [sprintFilter, setSprintFilter] = useState<string>('');
   const [showSetup, setShowSetup] = useState(false);
+  const [showCreateItem, setShowCreateItem] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [setupResult, setSetupResult] = useState<any>(null);
   const [error, setError] = useState('');
@@ -20,6 +30,8 @@ export default function App() {
   const queryClient = useQueryClient();
   useWebSocket();
 
+  const { data: authMe } = useAuthMe();
+  const role = authMe?.role;
   const { data: items, isError } = useItems(sprintFilter ? { sprintTag: sprintFilter } : undefined);
 
   useEffect(() => {
@@ -177,9 +189,23 @@ export default function App() {
         <div className="flex items-center gap-3">
           <Zap className="w-5 h-5 text-violet-400" />
           <h1 className="text-lg font-bold text-white tracking-tight">AgentBoard</h1>
+          {role && (
+            <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${ROLE_COLORS[role]}`}>
+              {ROLE_LABELS[role]}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <SprintFilter sprints={sprints} value={sprintFilter} onChange={setSprintFilter} />
+          {role === 'pm' && (
+            <button
+              onClick={() => setShowCreateItem(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Item
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
@@ -193,6 +219,7 @@ export default function App() {
       <main className="flex-1 overflow-hidden">
         <Board
           items={items || []}
+          role={role}
           onItemClick={(id) => setSelectedItemId(id)}
         />
       </main>
@@ -200,8 +227,14 @@ export default function App() {
       {selectedItemId && (
         <ItemDetail
           itemId={selectedItemId}
+          role={role}
+          allItems={items || []}
           onClose={() => setSelectedItemId(null)}
         />
+      )}
+
+      {showCreateItem && (
+        <CreateItemForm onClose={() => setShowCreateItem(false)} />
       )}
     </div>
   );

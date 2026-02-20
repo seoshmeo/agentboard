@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Item, Project, DecisionLog, Comment, ItemContext, CreateProjectResponse, TransitionRequest } from '@agentboard/shared';
+import type { Item, Project, DecisionLog, Comment, ItemContext, CreateProjectResponse, TransitionRequest, Role } from '@agentboard/shared';
 
 const API_BASE = '/api';
 
@@ -50,6 +50,10 @@ export async function createProject(data: { name: string; description?: string }
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error || `Server error (${res.status}). Is the backend running on port 3000?`);
+  }
   return res.json();
 }
 
@@ -168,18 +172,24 @@ export function useAddDependency() {
 }
 
 // Auth info
-export function useAuthInfo() {
+export function useAuthMe() {
   return useQuery({
-    queryKey: ['authInfo'],
-    queryFn: async () => {
-      const key = getApiKey();
-      if (!key) return null;
-      try {
-        const items = await apiFetch<Item[]>('/items');
-        return { authenticated: true };
-      } catch {
-        return null;
-      }
+    queryKey: ['authMe'],
+    queryFn: () => apiFetch<{ role: Role; projectId: string }>('/auth/me'),
+    enabled: !!getApiKey(),
+    retry: false,
+  });
+}
+
+// Dependencies removal
+export function useRemoveDependency() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, dependsOnItemId }: { itemId: string; dependsOnItemId: string }) =>
+      apiFetch(`/items/${itemId}/dependencies/${dependsOnItemId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['items'] });
+      qc.invalidateQueries({ queryKey: ['itemContext'] });
     },
   });
 }
