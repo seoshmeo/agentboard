@@ -22,8 +22,9 @@ export function ProjectSwitcher({ currentProjectId, currentProjectName, onSettin
   function switchToProject(projectId: string) {
     const key = savedProjects[projectId];
     if (key) {
-      setApiKey(key);
+      // Save current project key BEFORE overwriting with the new one
       saveProjectKey(currentProjectId, localStorage.getItem('agentboard_api_key') || '');
+      setApiKey(key);
       queryClient.clear();
       window.location.reload();
     } else {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Copy, Check, Key, Bot, FolderOpen } from 'lucide-react';
+import { X, Copy, Check, Key, Bot, FolderOpen, Download } from 'lucide-react';
 import { useProject, useUpdateProject, useProjectApiKeys, setApiKey, getStoredApiKey } from '../api/client.js';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Role } from '@agentboard/shared';
@@ -207,6 +207,37 @@ export function ProjectSettings({ projectId, role, onClose }: ProjectSettingsPro
             </div>
           </div>
         )}
+
+        {/* Export CLAUDE.md */}
+        <div className="p-5 border-b border-gray-800">
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch(`/api/projects/${projectId}/claude-md`, {
+                  headers: { Authorization: `Bearer ${getStoredApiKey()}` },
+                });
+                if (!res.ok) throw new Error('Failed to export');
+                const text = await res.text();
+                const blob = new Blob([text], { type: 'text/markdown' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'CLAUDE.md';
+                a.click();
+                URL.revokeObjectURL(url);
+              } catch {
+                alert('Failed to export CLAUDE.md');
+              }
+            }}
+            className="flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export CLAUDE.md for agents
+          </button>
+          <p className="text-[10px] text-gray-600 mt-1">
+            Downloads a markdown file with API integration instructions for AI agents (Claude Code, Cursor, etc.)
+          </p>
+        </div>
 
         {/* Project ID */}
         <div className="p-5">

@@ -4,6 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App.js';
 import './index.css';
 
+// Apply theme class before first render to prevent flash
+const theme = localStorage.getItem('agentboard_theme') || 'dark';
+if (theme === 'dark') {
+  document.documentElement.classList.add('dark');
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -12,7 +12,8 @@ import { FileBrowser } from './components/FileBrowser.js';
 import { GlobalSettings } from './components/GlobalSettings.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
 import { useItems, useAuthMe, useProject, setApiKey, getStoredApiKey, clearApiKey, createProject } from './api/client.js';
-import { LogOut, Plus, Zap, KeyRound, User, Activity, Map, FolderOpen, Settings } from 'lucide-react';
+import { LogOut, Plus, Zap, KeyRound, User, Activity, Map, FolderOpen, Settings, Sun, Moon } from 'lucide-react';
+import { useTheme } from './hooks/useTheme.js';
 import type { Role } from '@agentboard/shared';
 
 const ROLE_LABELS: Record<Role, string> = { pm: 'PM', dev: 'Dev', human: 'Human' };
@@ -40,6 +41,7 @@ export default function App() {
   const [error, setError] = useState('');
 
   const queryClient = useQueryClient();
+  const { theme, toggleTheme } = useTheme();
   useWebSocket();
 
   const { data: authMe } = useAuthMe();
@@ -84,7 +86,14 @@ export default function App() {
 
   if (!apiKey) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4 relative">
+        <button
+          onClick={toggleTheme}
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-3">
@@ -259,6 +268,13 @@ export default function App() {
             title="Activity Feed"
           >
             <Activity className="w-4 h-4" />
+          </button>
+          <button
+            onClick={toggleTheme}
+            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
           <button
             onClick={() => setShowGlobalSettings(true)}

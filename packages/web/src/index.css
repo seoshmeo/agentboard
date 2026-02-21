@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --color-draft: #6b7280;
@@ -7,4 +10,20 @@
   --color-in-progress: #8b5cf6;
   --color-done: #10b981;
   --color-accepted: #059669;
+}
+
+/* Light mode: remap gray palette so existing dark classes produce light backgrounds + dark text */
+:root:not(.dark) {
+  --color-gray-950: oklch(0.985 0.002 247.839);  /* page bg → near-white */
+  --color-gray-900: oklch(1 0 0);                 /* cards → white */
+  --color-gray-800: oklch(0.967 0.003 264.542);   /* inputs/inner → gray-100 */
+  --color-gray-700: oklch(0.928 0.006 264.531);   /* borders → gray-200 */
+  --color-gray-600: oklch(0.707 0.022 261.325);   /* muted borders → gray-400 */
+  --color-gray-500: oklch(0.551 0.027 264.364);   /* middle gray → stays */
+  --color-gray-400: oklch(0.446 0.03 256.802);    /* secondary text → gray-600 */
+  --color-gray-300: oklch(0.373 0.034 259.733);   /* text → gray-700 */
+  --color-gray-200: oklch(0.278 0.033 256.848);   /* emphasis text → gray-800 */
+  --color-gray-100: oklch(0.21 0.034 264.665);    /* strong text → gray-900 */
+  --color-gray-50: oklch(0.13 0.028 261.692);     /* strongest → gray-950 */
+  --color-white: oklch(0.21 0.034 264.665);        /* text-white → dark */
 }
