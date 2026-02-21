@@ -4,6 +4,7 @@ import { useItemContext, useTransition, useAddComment, useComments, useUpdateIte
 import { DecisionLog } from './DecisionLog.js';
 import { ItemChat } from './ItemChat.js';
 import { Markdown } from './Markdown.js';
+import { useEscapeKey } from '../hooks/useEscapeKey.js';
 import { cn, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS, ROLE_BADGE_COLORS, relativeTime } from '../lib/utils.js';
 import { getAvailableTransitions } from '@agentboard/shared';
 import type { Role, ItemStatus, Item } from '@agentboard/shared';
@@ -25,6 +26,7 @@ const TRANSITION_COLORS: Record<string, string> = {
 };
 
 export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps) {
+  useEscapeKey(onClose);
   const { data: context, isLoading } = useItemContext(itemId);
   const { data: commentsList } = useComments(itemId);
   const transition = useTransition();

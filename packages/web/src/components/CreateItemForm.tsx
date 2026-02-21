@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useCreateItem, useEpics } from '../api/client.js';
+import { useEscapeKey } from '../hooks/useEscapeKey.js';
 
 interface CreateItemFormProps {
   onClose: () => void;
 }
 
 export function CreateItemForm({ onClose }: CreateItemFormProps) {
+  useEscapeKey(onClose);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');

@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Bot, Check } from 'lucide-react';
 import { useSettings, useUpdateSettings } from '../api/client.js';
+import { useEscapeKey } from '../hooks/useEscapeKey.js';
 
 interface GlobalSettingsProps {
   onClose: () => void;
 }
 
 export function GlobalSettings({ onClose }: GlobalSettingsProps) {
+  useEscapeKey(onClose);
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
 

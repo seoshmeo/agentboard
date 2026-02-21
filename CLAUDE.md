@@ -37,6 +37,7 @@ packages/
         ├── App.tsx               # Auth screen + sidebar layout + page routing
         ├── api/client.ts         # fetch wrapper + all React Query hooks + validateApiKey()
         ├── hooks/useWebSocket.ts # Auto-reconnecting WS, invalidates queries
+        ├── hooks/useEscapeKey.ts # Escape key handler for modals
         ├── lib/utils.ts          # cn(), color maps, status labels
         └── components/
             ├── Board.tsx          # DnD context + 6 columns
@@ -51,6 +52,7 @@ packages/
             ├── ProjectSettings.tsx  # Project settings modal (name, description, API keys, Telegram, localPath)
             ├── ActivityFeed.tsx   # Activity feed (full page)
             ├── Roadmap.tsx        # Epics/roadmap (full page) with progress bars
+            ├── ErrorBoundary.tsx  # React error boundary with refresh button
             ├── FileBrowser.tsx    # File tree + code viewer modal
             ├── GlobalSettings.tsx # Global Anthropic API key settings modal
             ├── ItemChat.tsx       # AI chat panel within ItemDetail
@@ -168,13 +170,8 @@ WAL mode enabled. Foreign keys enforced.
 
 ## Known Issues
 
-### Security
-- Settings endpoints (`GET/PATCH /api/settings`) have NO auth middleware — anyone can read/write global settings
-
 ### Missing Infrastructure
 - No input validation (no Zod/JSON Schema on request bodies)
-- No error boundaries in React
 - No tests
 - No CI/CD
 - No pagination on list endpoints
-- `@dnd-kit/sortable` is a dependency but unused (no within-column sorting)

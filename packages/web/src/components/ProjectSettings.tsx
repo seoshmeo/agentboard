@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Copy, Check, Key, Bot, FolderOpen, Download } from 'lucide-react';
 import { useProject, useUpdateProject, useProjectApiKeys, setApiKey, getStoredApiKey } from '../api/client.js';
+import { useEscapeKey } from '../hooks/useEscapeKey.js';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Role } from '@agentboard/shared';
 
@@ -18,6 +19,7 @@ const ROLE_COLORS: Record<Role, string> = {
 };
 
 export function ProjectSettings({ projectId, role, onClose }: ProjectSettingsProps) {
+  useEscapeKey(onClose);
   const { data: project } = useProject(projectId);
   const { data: apiKeys } = useProjectApiKeys(projectId, true);
   const updateProject = useUpdateProject();

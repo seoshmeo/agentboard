@@ -16,7 +16,20 @@ import { startAgentWorker } from './services/agent-worker.js';
 
 const app = Fastify({ logger: true });
 
-await app.register(cors, { origin: true });
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174')
+  .split(',')
+  .map(o => o.trim());
+
+await app.register(cors, {
+  origin: (origin, cb) => {
+    // Allow requests with no origin (curl, server-to-server, mobile apps)
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Not allowed by CORS'), false);
+    }
+  },
+});
 await app.register(websocket);
 
 // Run migrations on startup

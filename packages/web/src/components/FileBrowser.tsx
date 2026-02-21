@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, File, Folder, FolderOpen, ChevronRight, ChevronDown, Code } from 'lucide-react';
 import { useFileTree, useFileContent } from '../api/client.js';
+import { useEscapeKey } from '../hooks/useEscapeKey.js';
 import type { FileEntry } from '@agentboard/shared';
 
 interface FileBrowserProps {
@@ -134,6 +135,7 @@ function CodeViewer({ projectId, filePath }: { projectId: string; filePath: stri
 }
 
 export function FileBrowser({ projectId, onClose }: FileBrowserProps) {
+  useEscapeKey(onClose);
   const { data, isLoading, isError, error } = useFileTree(projectId);
   const [selectedFile, setSelectedFile] = useState('');
 

@@ -2,8 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { settings } from '../db/schema.js';
-
-// No auth required for global settings — this is a local tool
+import { authMiddleware } from '../middleware/auth.js';
 
 export function getSetting(key: string): string | null {
   const row = db.select().from(settings).where(eq(settings.key, key)).get();
@@ -38,7 +37,7 @@ export function resolveAnthropicKey(projectKey?: string | null): string | null {
 
 export async function settingsRoutes(app: FastifyInstance) {
   // Get all settings (masks sensitive values)
-  app.get('/api/settings', async () => {
+  app.get('/api/settings', { preHandler: authMiddleware }, async () => {
     const all = db.select().from(settings).all();
     const result: Record<string, string | boolean> = {};
     for (const row of all) {
@@ -58,8 +57,11 @@ export async function settingsRoutes(app: FastifyInstance) {
     return result;
   });
 
-  // Update settings
-  app.patch('/api/settings', async (request) => {
+  // Update settings (human only)
+  app.patch('/api/settings', { preHandler: authMiddleware }, async (request, reply) => {
+    if (request.role !== 'human') {
+      return reply.status(403).send({ error: 'Only human role can update settings' });
+    }
     const body = request.body as Record<string, string | null>;
     for (const [key, value] of Object.entries(body)) {
       setSetting(key, value || null);
