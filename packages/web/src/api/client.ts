@@ -38,6 +38,18 @@ export function removeProjectKey(projectId: string) {
   localStorage.setItem('agentboard_projects', JSON.stringify(projects));
 }
 
+export async function validateApiKey(key: string): Promise<{ role: Role; projectId: string } | null> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...opts,

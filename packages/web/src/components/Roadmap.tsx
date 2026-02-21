@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Plus, ChevronDown, ChevronRight, Pencil, Trash2, GripVertical } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { useEpics, useCreateEpic, useUpdateEpic, useDeleteEpic, useItems, type EpicWithCounts } from '../api/client.js';
 import { cn, STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS } from '../lib/utils.js';
 import type { Role, Item } from '@agentboard/shared';
@@ -7,7 +7,6 @@ import type { Role, Item } from '@agentboard/shared';
 interface RoadmapProps {
   role?: Role;
   onItemClick: (id: string) => void;
-  onClose: () => void;
 }
 
 const EPIC_STATUS_COLORS: Record<string, string> = {
@@ -169,7 +168,7 @@ function EpicForm({
   );
 }
 
-export function Roadmap({ role, onItemClick, onClose }: RoadmapProps) {
+export function Roadmap({ role, onItemClick }: RoadmapProps) {
   const { data: epics, isLoading } = useEpics();
   const { data: items } = useItems();
   const createEpic = useCreateEpic();
@@ -198,26 +197,21 @@ export function Roadmap({ role, onItemClick, onClose }: RoadmapProps) {
   }
 
   return (
-    <aside className="w-[420px] border-l border-gray-800 bg-gray-950 flex flex-col shrink-0 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-        <h2 className="text-sm font-semibold text-white">Roadmap</h2>
-        <div className="flex items-center gap-2">
-          {canManage && !showCreateForm && (
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Epic
-            </button>
-          )}
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors p-1">
-            <X className="w-4 h-4" />
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+        <h2 className="text-lg font-bold text-white">Roadmap</h2>
+        {canManage && !showCreateForm && (
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium rounded-lg transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Epic
           </button>
-        </div>
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-6 space-y-3 max-w-4xl mx-auto w-full">
         {isLoading && <p className="text-sm text-gray-500">Loading...</p>}
 
         {showCreateForm && (
@@ -289,6 +283,6 @@ export function Roadmap({ role, onItemClick, onClose }: RoadmapProps) {
           </div>
         )}
       </div>
-    </aside>
+    </div>
   );
 }

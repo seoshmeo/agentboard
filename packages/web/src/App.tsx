@@ -4,15 +4,16 @@ import { Board } from './components/Board.js';
 import { ItemDetail } from './components/ItemDetail.js';
 import { CreateItemForm } from './components/CreateItemForm.js';
 import { SprintFilter } from './components/SprintFilter.js';
-import { ProjectSwitcher } from './components/ProjectSwitcher.js';
 import { ProjectSettings } from './components/ProjectSettings.js';
 import { ActivityFeed } from './components/ActivityFeed.js';
 import { Roadmap } from './components/Roadmap.js';
 import { FileBrowser } from './components/FileBrowser.js';
 import { GlobalSettings } from './components/GlobalSettings.js';
+import { Sidebar, type Page } from './components/Sidebar.js';
+import { ProjectsPage } from './components/ProjectsPage.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
 import { useItems, useAuthMe, useProject, setApiKey, getStoredApiKey, clearApiKey, createProject } from './api/client.js';
-import { LogOut, Plus, Zap, KeyRound, User, Activity, Map, FolderOpen, Settings, Sun, Moon } from 'lucide-react';
+import { Plus, Zap, KeyRound, Sun, Moon } from 'lucide-react';
 import { useTheme } from './hooks/useTheme.js';
 import type { Role } from '@agentboard/shared';
 
@@ -31,14 +32,13 @@ export default function App() {
   const [showSetup, setShowSetup] = useState(false);
   const [showCreateItem, setShowCreateItem] = useState(false);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
-  const [showActivity, setShowActivity] = useState(false);
-  const [showRoadmap, setShowRoadmap] = useState(false);
   const [showFiles, setShowFiles] = useState(false);
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [projectPath, setProjectPath] = useState('');
   const [setupResult, setSetupResult] = useState<any>(null);
   const [error, setError] = useState('');
+  const [activePage, setActivePage] = useState<Page>('board');
 
   const queryClient = useQueryClient();
   const { theme, toggleTheme } = useTheme();
@@ -82,6 +82,18 @@ export default function App() {
     } catch (e: any) {
       setError(e.message);
     }
+  }
+
+  function handleNavigate(page: Page) {
+    if (page === 'files') {
+      setShowFiles(true);
+      return;
+    }
+    if (page === 'settings') {
+      setShowGlobalSettings(true);
+      return;
+    }
+    setActivePage(page);
   }
 
   if (!apiKey) {
@@ -222,12 +234,10 @@ export default function App() {
         <div className="flex items-center gap-3">
           <Zap className="w-5 h-5 text-violet-400" />
           <h1 className="text-lg font-bold text-white tracking-tight">AgentBoard</h1>
-          {projectData && authMe?.projectId && (
-            <ProjectSwitcher
-              currentProjectId={authMe.projectId}
-              currentProjectName={projectData.name}
-              onSettingsClick={() => setShowProjectSettings(true)}
-            />
+          {projectData && (
+            <span className="text-sm text-gray-400 font-medium max-w-[200px] truncate">
+              {projectData.name}
+            </span>
           )}
           {role && (
             <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${ROLE_COLORS[role]}`}>
@@ -236,7 +246,9 @@ export default function App() {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <SprintFilter sprints={sprints} value={sprintFilter} onChange={setSprintFilter} />
+          {activePage === 'board' && (
+            <SprintFilter sprints={sprints} value={sprintFilter} onChange={setSprintFilter} />
+          )}
           {role && (
             <button
               onClick={() => setShowCreateItem(true)}
@@ -246,29 +258,6 @@ export default function App() {
               New Item
             </button>
           )}
-          {projectData?.localPath && (
-            <button
-              onClick={() => setShowFiles(true)}
-              className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
-              title="Files"
-            >
-              <FolderOpen className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            onClick={() => setShowRoadmap(prev => !prev)}
-            className={`p-2 transition-colors rounded-lg ${showRoadmap ? 'text-violet-400 bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-            title="Roadmap"
-          >
-            <Map className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setShowActivity(prev => !prev)}
-            className={`p-2 transition-colors rounded-lg ${showActivity ? 'text-violet-400 bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-            title="Activity Feed"
-          >
-            <Activity className="w-4 h-4" />
-          </button>
           <button
             onClick={toggleTheme}
             className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
@@ -276,42 +265,42 @@ export default function App() {
           >
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
-          <button
-            onClick={() => setShowGlobalSettings(true)}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
-            title="Global Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleLogout}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
-            title="Logout"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <main className="flex-1 overflow-hidden">
-          <Board
-            items={items || []}
-            role={role}
-            onItemClick={(id) => setSelectedItemId(id)}
-          />
-        </main>
-        {showRoadmap && (
+        <Sidebar
+          activePage={activePage}
+          onNavigate={handleNavigate}
+          hasLocalPath={!!projectData?.localPath}
+          role={role}
+          onLogout={handleLogout}
+        />
+
+        {activePage === 'board' && (
+          <main className="flex-1 overflow-hidden">
+            <Board
+              items={items || []}
+              role={role}
+              onItemClick={(id) => setSelectedItemId(id)}
+            />
+          </main>
+        )}
+
+        {activePage === 'projects' && (
+          <ProjectsPage currentProjectId={authMe?.projectId} />
+        )}
+
+        {activePage === 'roadmap' && (
           <Roadmap
             role={role}
             onItemClick={(id) => setSelectedItemId(id)}
-            onClose={() => setShowRoadmap(false)}
           />
         )}
-        {showActivity && (
+
+        {activePage === 'activity' && (
           <ActivityFeed
             onItemClick={(id) => setSelectedItemId(id)}
-            onClose={() => setShowActivity(false)}
           />
         )}
       </div>

@@ -34,8 +34,8 @@ packages/
 └── web/             # React 19 + Vite + Tailwind v4 + TanStack Query + dnd-kit
     └── src/
         ├── main.tsx              # React entry point + QueryClient
-        ├── App.tsx               # Auth screen + Board layout + header with toggles
-        ├── api/client.ts         # fetch wrapper + all React Query hooks
+        ├── App.tsx               # Auth screen + sidebar layout + page routing
+        ├── api/client.ts         # fetch wrapper + all React Query hooks + validateApiKey()
         ├── hooks/useWebSocket.ts # Auto-reconnecting WS, invalidates queries
         ├── lib/utils.ts          # cn(), color maps, status labels
         └── components/
@@ -46,10 +46,11 @@ packages/
             ├── CreateItemForm.tsx # Create item modal with epic selector
             ├── DecisionLog.tsx    # Expandable log list with markdown rendering
             ├── SprintFilter.tsx   # Sprint dropdown filter
-            ├── ProjectSwitcher.tsx  # Multi-project switcher dropdown
+            ├── Sidebar.tsx        # Collapsible left nav (Board, Projects, Roadmap, Activity, Files, Settings)
+            ├── ProjectsPage.tsx   # Projects management page (list, connect, switch, create with key validation)
             ├── ProjectSettings.tsx  # Project settings modal (name, description, API keys, Telegram, localPath)
-            ├── ActivityFeed.tsx   # Real-time activity feed sidebar
-            ├── Roadmap.tsx        # Epics/roadmap sidebar with progress bars
+            ├── ActivityFeed.tsx   # Activity feed (full page)
+            ├── Roadmap.tsx        # Epics/roadmap (full page) with progress bars
             ├── FileBrowser.tsx    # File tree + code viewer modal
             ├── GlobalSettings.tsx # Global Anthropic API key settings modal
             ├── ItemChat.tsx       # AI chat panel within ItemDetail
@@ -177,4 +178,3 @@ WAL mode enabled. Foreign keys enforced.
 - No CI/CD
 - No pagination on list endpoints
 - `@dnd-kit/sortable` is a dependency but unused (no within-column sorting)
-- `ProjectSelector.tsx` component exists but unused (superseded by ProjectSwitcher)

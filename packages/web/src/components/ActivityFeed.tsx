@@ -1,27 +1,23 @@
-import { X, MessageSquare, BookOpen } from 'lucide-react';
+import { MessageSquare, BookOpen } from 'lucide-react';
 import { useActivityFeed } from '../api/client.js';
 import { cn, ROLE_BADGE_COLORS, relativeTime } from '../lib/utils.js';
 
 interface ActivityFeedProps {
   onItemClick: (itemId: string) => void;
-  onClose: () => void;
 }
 
 const ROLE_LABELS: Record<string, string> = { pm: 'PM', dev: 'Dev', human: 'Human' };
 
-export function ActivityFeed({ onItemClick, onClose }: ActivityFeedProps) {
+export function ActivityFeed({ onItemClick }: ActivityFeedProps) {
   const { data: entries, isLoading } = useActivityFeed(50);
 
   return (
-    <div className="w-80 bg-gray-900 border-l border-gray-800 flex flex-col shrink-0">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-        <h2 className="text-sm font-semibold text-white">Activity</h2>
-        <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors p-1">
-          <X className="w-4 h-4" />
-        </button>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+        <h2 className="text-lg font-bold text-white">Activity</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto max-w-3xl mx-auto w-full">
         {isLoading && (
           <div className="p-4 text-sm text-gray-500">Loading...</div>
         )}
