@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Copy, Check, Key, Bot } from 'lucide-react';
+import { X, Copy, Check, Key, Bot, FolderOpen } from 'lucide-react';
 import { useProject, useUpdateProject, useProjectApiKeys, setApiKey, getStoredApiKey } from '../api/client.js';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Role } from '@agentboard/shared';
@@ -29,6 +29,7 @@ export function ProjectSettings({ projectId, role, onClose }: ProjectSettingsPro
   const [editAnthropicKey, setEditAnthropicKey] = useState('');
   const [editTgToken, setEditTgToken] = useState('');
   const [editTgChat, setEditTgChat] = useState('');
+  const [editLocalPath, setEditLocalPath] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   if (!project) return null;
@@ -39,6 +40,7 @@ export function ProjectSettings({ projectId, role, onClose }: ProjectSettingsPro
     setEditAnthropicKey(project!.anthropicApiKey || '');
     setEditTgToken(project!.telegramBotToken || '');
     setEditTgChat(project!.telegramChatId || '');
+    setEditLocalPath(project!.localPath || '');
     setEditing(true);
   }
 
@@ -50,6 +52,7 @@ export function ProjectSettings({ projectId, role, onClose }: ProjectSettingsPro
       anthropicApiKey: editAnthropicKey.trim() || undefined,
       telegramBotToken: editTgToken.trim() || undefined,
       telegramChatId: editTgChat.trim() || undefined,
+      localPath: editLocalPath.trim() || undefined,
     }, { onSuccess: () => setEditing(false) });
   }
 
@@ -113,6 +116,19 @@ export function ProjectSettings({ projectId, role, onClose }: ProjectSettingsPro
                   <input value={editTgChat} onChange={e => setEditTgChat(e.target.value)} placeholder="-100..." className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-violet-500" />
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  Local Path
+                </label>
+                <input
+                  value={editLocalPath}
+                  onChange={e => setEditLocalPath(e.target.value)}
+                  placeholder="/Users/you/projects/myapp"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm font-mono placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
+                <p className="text-[10px] text-gray-600 mt-1">Absolute path to your project directory for file browsing</p>
+              </div>
               <div className="flex justify-end gap-2">
                 <button onClick={() => setEditing(false)} className="text-xs px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg">Cancel</button>
                 <button onClick={saveEdit} disabled={!editName.trim() || updateProject.isPending} className="text-xs px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 text-white rounded-lg">
@@ -138,6 +154,12 @@ export function ProjectSettings({ projectId, role, onClose }: ProjectSettingsPro
               )}
               {(project.telegramBotToken || project.telegramChatId) && (
                 <p className="text-xs text-gray-500 mt-2">Telegram: configured</p>
+              )}
+              {project.localPath && (
+                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
+                  <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
+                  <code className="font-mono text-gray-400">{project.localPath}</code>
+                </p>
               )}
               {role === 'human' && (
                 <button onClick={startEdit} className="mt-3 text-xs text-violet-400 hover:text-violet-300 transition-colors">

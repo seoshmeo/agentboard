@@ -76,4 +76,51 @@ export function runMigrations() {
   } catch {
     // Column already exists
   }
+
+  // Add local_path column to projects (idempotent)
+  try {
+    sqlite.exec(`ALTER TABLE projects ADD COLUMN local_path TEXT`);
+  } catch {
+    // Column already exists
+  }
+
+  // Add epics table
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS epics (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id),
+      title TEXT NOT NULL,
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'planned' CHECK(status IN ('planned','active','completed')),
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  // Add epic_id column to items
+  try {
+    sqlite.exec(`ALTER TABLE items ADD COLUMN epic_id TEXT REFERENCES epics(id)`);
+  } catch {
+    // Column already exists
+  }
+
+  // Add settings table
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+  `);
+
+  // Add item_progress table
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS item_progress (
+      item_id TEXT PRIMARY KEY REFERENCES items(id),
+      percent INTEGER NOT NULL DEFAULT 0,
+      step TEXT NOT NULL,
+      log TEXT,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
 }

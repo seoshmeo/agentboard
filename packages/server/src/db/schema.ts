@@ -8,6 +8,7 @@ export const projects = sqliteTable('projects', {
   anthropicApiKey: text('anthropic_api_key'),
   telegramBotToken: text('telegram_bot_token'),
   telegramChatId: text('telegram_chat_id'),
+  localPath: text('local_path'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
   updatedAt: text('updated_at').default(sql`(datetime('now'))`),
 });
@@ -21,6 +22,17 @@ export const apiKeys = sqliteTable('api_keys', {
   createdAt: text('created_at').default(sql`(datetime('now'))`),
 });
 
+export const epics = sqliteTable('epics', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status', { enum: ['planned', 'active', 'completed'] }).default('planned').notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').default(sql`(datetime('now'))`),
+});
+
 export const items = sqliteTable('items', {
   id: text('id').primaryKey(),
   projectId: text('project_id').notNull().references(() => projects.id),
@@ -31,6 +43,7 @@ export const items = sqliteTable('items', {
     enum: ['draft', 'pending_review', 'approved', 'in_progress', 'done', 'accepted'],
   }).default('draft').notNull(),
   sprintTag: text('sprint_tag'),
+  epicId: text('epic_id').references(() => epics.id),
   assignedTo: text('assigned_to'),
   createdByRole: text('created_by_role'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
@@ -61,6 +74,19 @@ export const comments = sqliteTable('comments', {
   content: text('content').notNull(),
   authorRole: text('author_role'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
+});
+
+export const itemProgress = sqliteTable('item_progress', {
+  itemId: text('item_id').primaryKey().references(() => items.id),
+  percent: integer('percent').default(0).notNull(),
+  step: text('step').notNull(),
+  log: text('log'),
+  updatedAt: text('updated_at').default(sql`(datetime('now'))`),
+});
+
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value'),
 });
 
 export const chatMessages = sqliteTable('chat_messages', {

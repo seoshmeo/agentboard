@@ -1,8 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db/connection.js';
-import { projects, items, comments, decisionLogs, dependencies } from '../db/schema.js';
+import { projects, items, comments, decisionLogs, dependencies, epics } from '../db/schema.js';
 import { broadcast } from '../ws/index.js';
+import { resolveAnthropicKey } from '../routes/settings.js';
 
 const POLL_INTERVAL = 15_000; // 15 seconds
 
@@ -15,7 +16,7 @@ async function callClaude(apiKey: string, system: string, userMessage: string): 
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
       system,
       messages: [{ role: 'user', content: userMessage }],
@@ -74,6 +75,29 @@ function getItemDepsContext(itemId: string): string {
   return ctx;
 }
 
+function getRoadmapContext(projectId: string): string {
+  const projectEpics = db.select().from(epics)
+    .where(eq(epics.projectId, projectId))
+    .all();
+
+  if (projectEpics.length === 0) return '';
+
+  projectEpics.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  let text = '\n\nProject Roadmap:\n';
+  for (const epic of projectEpics) {
+    text += `## Epic: ${epic.title} (${epic.status})\n`;
+    const epicItems = db.select().from(items)
+      .where(and(eq(items.projectId, projectId), eq(items.epicId, epic.id)))
+      .all();
+    for (const item of epicItems) {
+      text += `  - [${item.status}] ${item.title}\n`;
+    }
+  }
+
+  return text;
+}
+
 async function processDraftItems(projectId: string, apiKey: string) {
   const drafts = db.select().from(items)
     .where(eq(items.projectId, projectId))
@@ -85,6 +109,7 @@ async function processDraftItems(projectId: string, apiKey: string) {
 
     try {
       const depsCtx = getItemDepsContext(item.id);
+      const roadmapCtx = getRoadmapContext(projectId);
       const plan = await callClaude(
         apiKey,
         `You are a senior software architect. Write a clear, actionable implementation plan for the given task. Include:
@@ -94,7 +119,7 @@ async function processDraftItems(projectId: string, apiKey: string) {
 4. Potential risks or considerations
 
 Be concise but thorough. Write in the same language as the task description.`,
-        `Task: ${item.title}${item.description ? `\n\nDescription: ${item.description}` : ''}${depsCtx}\n\nPriority: ${item.priority}`
+        `Task: ${item.title}${item.description ? `\n\nDescription: ${item.description}` : ''}${depsCtx}${roadmapCtx}\n\nPriority: ${item.priority}`
       );
 
       addComment(item.id, `**Implementation Plan**\n\n${plan}`, 'dev');
@@ -125,6 +150,7 @@ async function processApprovedItems(projectId: string, apiKey: string) {
       const planComment = itemComments.find(c => c.content.includes('Implementation Plan'));
       const depsCtx = getItemDepsContext(item.id);
 
+      const roadmapCtx = getRoadmapContext(projectId);
       const implementation = await callClaude(
         apiKey,
         `You are a senior developer implementing a task. Based on the task description and the approved plan, write:
@@ -134,7 +160,7 @@ async function processApprovedItems(projectId: string, apiKey: string) {
 3. What was completed
 
 Be specific and technical. Write in the same language as the task.`,
-        `Task: ${item.title}${item.description ? `\nDescription: ${item.description}` : ''}${planComment ? `\n\nApproved plan:\n${planComment.content}` : ''}${depsCtx}`
+        `Task: ${item.title}${item.description ? `\nDescription: ${item.description}` : ''}${planComment ? `\n\nApproved plan:\n${planComment.content}` : ''}${depsCtx}${roadmapCtx}`
       );
 
       // Add implementation as comment
@@ -162,10 +188,11 @@ async function tick() {
     const allProjects = db.select().from(projects).all();
 
     for (const project of allProjects) {
-      if (!project.anthropicApiKey) continue;
+      const apiKey = resolveAnthropicKey(project.anthropicApiKey);
+      if (!apiKey) continue;
 
-      await processDraftItems(project.id, project.anthropicApiKey);
-      await processApprovedItems(project.id, project.anthropicApiKey);
+      await processDraftItems(project.id, apiKey);
+      await processApprovedItems(project.id, apiKey);
     }
   } catch (err) {
     console.error('[Agent] Worker error:', err);

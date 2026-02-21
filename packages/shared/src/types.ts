@@ -9,8 +9,17 @@ export interface Project {
   anthropicApiKey?: string | null;
   telegramBotToken?: string | null;
   telegramChatId?: string | null;
+  localPath?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+}
+
+export interface FileEntry {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  size?: number;
+  children?: FileEntry[];
 }
 
 export interface ApiKey {
@@ -30,6 +39,7 @@ export interface Item {
   priority: Priority;
   status: ItemStatus;
   sprintTag?: string | null;
+  epicId?: string | null;
   assignedTo?: string | null;
   createdByRole?: string | null;
   createdAt?: string | null;
@@ -81,6 +91,17 @@ export interface CreateProjectResponse {
   apiKeys: ApiKey[];
 }
 
+export interface Epic {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string | null;
+  status: 'planned' | 'active' | 'completed';
+  sortOrder: number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export interface ActivityEntry {
   type: 'comment' | 'decision';
   id: string;
@@ -89,6 +110,14 @@ export interface ActivityEntry {
   content: string;
   role: string | null;
   createdAt: string | null;
+}
+
+export interface ItemProgress {
+  itemId: string;
+  percent: number;
+  step: string;
+  log?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface ChatMessage {

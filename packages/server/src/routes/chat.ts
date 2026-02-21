@@ -2,15 +2,17 @@ import type { FastifyInstance } from 'fastify';
 import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db/connection.js';
-import { items, chatMessages, comments, decisionLogs, dependencies, projects } from '../db/schema.js';
+import { items, chatMessages, comments, decisionLogs, dependencies, projects, epics } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { broadcast } from '../ws/index.js';
+import { resolveAnthropicKey } from './settings.js';
 
 function buildSystemPrompt(context: {
   item: { title: string; description: string | null; status: string; priority: string };
   decisionLogs: { decision: string; context: string }[];
   comments: { content: string; authorRole: string | null }[];
   deps: { title: string; status: string; decisions: string[] }[];
+  roadmapText?: string;
 }): string {
   let prompt = `You are an AI assistant helping with a development task on AgentBoard.
 
@@ -44,6 +46,10 @@ ${context.item.description ? `**Description**: ${context.item.description}` : ''
     }
   }
 
+  if (context.roadmapText) {
+    prompt += '\n\n## Project Roadmap\n' + context.roadmapText;
+  }
+
   prompt += '\n\nHelp the user with questions about this item. Be concise and actionable.';
   return prompt;
 }
@@ -57,11 +63,10 @@ export async function chatRoutes(app: FastifyInstance) {
 
   // Send chat message
   app.post('/api/items/:id/chat', { preHandler: authMiddleware }, async (request, reply) => {
-    // Try project-level key first, then env var
     const project = db.select().from(projects).where(eq(projects.id, request.projectId)).get();
-    const apiKey = project?.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+    const apiKey = resolveAnthropicKey(project?.anthropicApiKey);
     if (!apiKey) {
-      return reply.status(503).send({ error: 'AI chat not available — set Anthropic API Key in Project Settings' });
+      return reply.status(503).send({ error: 'AI chat not available — set Anthropic API Key in Global Settings or Project Settings' });
     }
 
     const { id } = request.params as { id: string };
@@ -100,11 +105,28 @@ export async function chatRoutes(app: FastifyInstance) {
       };
     });
 
+    // Build roadmap text
+    const projectEpics = db.select().from(epics)
+      .where(eq(epics.projectId, request.projectId))
+      .all();
+    projectEpics.sort((a, b) => a.sortOrder - b.sortOrder);
+    let roadmapText = '';
+    for (const epic of projectEpics) {
+      roadmapText += `## Epic: ${epic.title} (${epic.status})\n`;
+      const epicItems = db.select().from(items)
+        .where(and(eq(items.projectId, request.projectId), eq(items.epicId, epic.id)))
+        .all();
+      for (const ei of epicItems) {
+        roadmapText += `  - [${ei.status}] ${ei.title}\n`;
+      }
+    }
+
     const systemPrompt = buildSystemPrompt({
       item: { title: item.title, description: item.description, status: item.status, priority: item.priority },
       decisionLogs: itemDecisions.map(d => ({ decision: d.decision, context: d.context })),
       comments: itemComments.map(c => ({ content: c.content, authorRole: c.authorRole })),
       deps,
+      roadmapText: roadmapText || undefined,
     });
 
     // Get chat history
@@ -124,7 +146,7 @@ export async function chatRoutes(app: FastifyInstance) {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 1024,
           system: systemPrompt,
           messages,

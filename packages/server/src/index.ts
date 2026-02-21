@@ -8,6 +8,9 @@ import { itemRoutes } from './routes/items.js';
 import { decisionRoutes } from './routes/decisions.js';
 import { activityRoutes } from './routes/activity.js';
 import { chatRoutes } from './routes/chat.js';
+import { epicRoutes } from './routes/epics.js';
+import { fileRoutes } from './routes/files.js';
+import { settingsRoutes } from './routes/settings.js';
 import { wsRoutes } from './ws/index.js';
 import { startAgentWorker } from './services/agent-worker.js';
 
@@ -26,6 +29,9 @@ await app.register(itemRoutes);
 await app.register(decisionRoutes);
 await app.register(activityRoutes);
 await app.register(chatRoutes);
+await app.register(epicRoutes);
+await app.register(fileRoutes);
+await app.register(settingsRoutes);
 await app.register(wsRoutes);
 
 const port = parseInt(process.env.PORT || '3000', 10);

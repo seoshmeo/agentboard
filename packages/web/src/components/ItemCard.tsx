@@ -1,5 +1,6 @@
 import { useDraggable } from '@dnd-kit/core';
 import { cn, PRIORITY_COLORS } from '../lib/utils.js';
+import { useItemProgress } from '../api/client.js';
 import { GripVertical, GitBranch, Tag } from 'lucide-react';
 import type { Item } from '@agentboard/shared';
 
@@ -13,6 +14,7 @@ export function ItemCard({ item, onClick, isDragOverlay }: ItemCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: item.id,
   });
+  const { data: progress } = useItemProgress(item.status === 'in_progress' ? item.id : '');
 
   return (
     <div
@@ -47,6 +49,17 @@ export function ItemCard({ item, onClick, isDragOverlay }: ItemCardProps) {
               <span className="text-[10px] text-gray-500 truncate ml-auto">{item.assignedTo}</span>
             )}
           </div>
+          {progress && item.status === 'in_progress' && (
+            <div className="mt-2">
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-[10px] text-gray-500 truncate">{progress.step}</span>
+                <span className="text-[10px] text-gray-600">{progress.percent}%</span>
+              </div>
+              <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full bg-violet-500 rounded-full transition-all duration-300" style={{ width: `${progress.percent}%` }} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

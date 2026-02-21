@@ -32,6 +32,13 @@ export function useWebSocket() {
           if (eventName?.startsWith('chat:')) {
             queryClient.invalidateQueries({ queryKey: ['chat'] });
           }
+          if (eventName?.startsWith('progress:')) {
+            queryClient.invalidateQueries({ queryKey: ['progress'] });
+          }
+          if (eventName?.startsWith('epic:')) {
+            queryClient.invalidateQueries({ queryKey: ['epics'] });
+            queryClient.invalidateQueries({ queryKey: ['items'] });
+          }
         } catch {}
       };
 

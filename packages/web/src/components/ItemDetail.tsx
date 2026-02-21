@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { X, ArrowRight, MessageSquare, GitBranch, BookOpen, AlertTriangle, Pencil, Trash2, Plus, Unlink, Bot } from 'lucide-react';
-import { useItemContext, useTransition, useAddComment, useComments, useUpdateItem, useDeleteItem, useAddDependency, useRemoveDependency } from '../api/client.js';
+import { useItemContext, useTransition, useAddComment, useComments, useUpdateItem, useDeleteItem, useAddDependency, useRemoveDependency, useEpics, useItemProgress } from '../api/client.js';
 import { DecisionLog } from './DecisionLog.js';
 import { ItemChat } from './ItemChat.js';
+import { Markdown } from './Markdown.js';
 import { cn, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS, ROLE_BADGE_COLORS, relativeTime } from '../lib/utils.js';
 import { getAvailableTransitions } from '@agentboard/shared';
 import type { Role, ItemStatus, Item } from '@agentboard/shared';
@@ -32,6 +33,8 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
   const addDep = useAddDependency();
   const removeDep = useRemoveDependency();
   const addComment = useAddComment();
+  const { data: epics } = useEpics();
+  const { data: progress } = useItemProgress(itemId);
 
   const [commentText, setCommentText] = useState('');
   const [transitionComment, setTransitionComment] = useState('');
@@ -43,6 +46,7 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
   const [editPriority, setEditPriority] = useState('medium');
   const [editSprint, setEditSprint] = useState('');
   const [editAssignee, setEditAssignee] = useState('');
+  const [editEpicId, setEditEpicId] = useState('');
   const [showAddDep, setShowAddDep] = useState(false);
   const [depItemId, setDepItemId] = useState('');
 
@@ -62,6 +66,7 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
     setEditDesc(item.description || '');
     setEditPriority(item.priority);
     setEditSprint(item.sprintTag || '');
+    setEditEpicId(item.epicId || '');
     setEditAssignee(item.assignedTo || '');
     setEditing(true);
   }
@@ -73,6 +78,7 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
       description: editDesc.trim(),
       priority: editPriority,
       sprintTag: editSprint.trim() || undefined,
+      epicId: editEpicId || null,
       assignedTo: editAssignee.trim() || undefined,
     }, { onSuccess: () => setEditing(false) });
   }
@@ -133,6 +139,12 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
               {item.sprintTag && (
                 <span className="text-[10px] text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">{item.sprintTag}</span>
               )}
+              {item.epicId && epics && (() => {
+                const epic = epics.find(e => e.id === item.epicId);
+                return epic ? (
+                  <span className="text-[10px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded">{epic.title}</span>
+                ) : null;
+              })()}
             </div>
             {editing ? (
               <input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="w-full text-lg font-semibold bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white focus:outline-none focus:ring-2 focus:ring-violet-500" />
@@ -178,6 +190,25 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
           </div>
         )}
 
+        {/* Progress */}
+        {progress && item.status === 'in_progress' && (
+          <div className="px-5 py-3 border-b border-gray-800">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-medium text-gray-400">{progress.step}</span>
+              <span className="text-xs text-gray-500">{progress.percent}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-violet-500 rounded-full transition-all duration-300"
+                style={{ width: `${progress.percent}%` }}
+              />
+            </div>
+            {progress.log && (
+              <p className="text-[10px] text-gray-600 mt-1 truncate">{progress.log}</p>
+            )}
+          </div>
+        )}
+
         {/* Transition comment dialog */}
         {showTransitionComment && (
           <div className="px-5 py-3 border-b border-gray-800 bg-gray-800/50">
@@ -210,10 +241,10 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Description</h3>
           {editing ? (
             <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={4} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" placeholder="Description..." />
+          ) : item.description ? (
+            <Markdown content={item.description} />
           ) : (
-            <div className="prose prose-invert prose-sm max-w-none text-gray-300">
-              {item.description ? <p className="whitespace-pre-wrap">{item.description}</p> : <p className="text-gray-600 italic">No description</p>}
-            </div>
+            <p className="text-gray-600 italic text-sm">No description</p>
           )}
         </div>
 
@@ -237,6 +268,17 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Assignee</label>
               <input value={editAssignee} onChange={e => setEditAssignee(e.target.value)} placeholder="Name" className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
             </div>
+            {epics && epics.length > 0 && (
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Epic</label>
+                <select value={editEpicId} onChange={e => setEditEpicId(e.target.value)} className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500">
+                  <option value="">No epic</option>
+                  {epics.map(e => (
+                    <option key={e.id} value={e.id}>{e.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         )}
 
@@ -336,7 +378,7 @@ export function ItemDetail({ itemId, role, allItems, onClose }: ItemDetailProps)
                     )}
                     <span className="text-[10px] text-gray-600">{relativeTime(c.createdAt)}</span>
                   </div>
-                  <p className="text-sm text-gray-300">{c.content}</p>
+                  <Markdown content={c.content} />
                 </div>
               ))}
             </div>

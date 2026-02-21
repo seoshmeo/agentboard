@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { useCreateItem } from '../api/client.js';
+import { useCreateItem, useEpics } from '../api/client.js';
 
 interface CreateItemFormProps {
   onClose: () => void;
@@ -11,7 +11,9 @@ export function CreateItemForm({ onClose }: CreateItemFormProps) {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
   const [sprintTag, setSprintTag] = useState('');
+  const [epicId, setEpicId] = useState('');
   const createItem = useCreateItem();
+  const { data: epics } = useEpics();
 
   function handleSubmit() {
     if (!title.trim()) return;
@@ -20,6 +22,7 @@ export function CreateItemForm({ onClose }: CreateItemFormProps) {
       description: description.trim() || undefined,
       priority,
       sprintTag: sprintTag.trim() || undefined,
+      epicId: epicId || undefined,
     }, {
       onSuccess: () => onClose(),
     });
@@ -83,6 +86,22 @@ export function CreateItemForm({ onClose }: CreateItemFormProps) {
               />
             </div>
           </div>
+
+          {epics && epics.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Epic</label>
+              <select
+                value={epicId}
+                onChange={e => setEpicId(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                <option value="">No epic</option>
+                {epics.map(e => (
+                  <option key={e.id} value={e.id}>{e.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {createItem.isError && (
             <p className="text-xs text-red-400">{(createItem.error as Error).message}</p>

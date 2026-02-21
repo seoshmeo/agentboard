@@ -7,9 +7,12 @@ import { SprintFilter } from './components/SprintFilter.js';
 import { ProjectSwitcher } from './components/ProjectSwitcher.js';
 import { ProjectSettings } from './components/ProjectSettings.js';
 import { ActivityFeed } from './components/ActivityFeed.js';
+import { Roadmap } from './components/Roadmap.js';
+import { FileBrowser } from './components/FileBrowser.js';
+import { GlobalSettings } from './components/GlobalSettings.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
 import { useItems, useAuthMe, useProject, setApiKey, getStoredApiKey, clearApiKey, createProject } from './api/client.js';
-import { LogOut, Plus, Zap, KeyRound, User, Activity } from 'lucide-react';
+import { LogOut, Plus, Zap, KeyRound, User, Activity, Map, FolderOpen, Settings } from 'lucide-react';
 import type { Role } from '@agentboard/shared';
 
 const ROLE_LABELS: Record<Role, string> = { pm: 'PM', dev: 'Dev', human: 'Human' };
@@ -28,7 +31,11 @@ export default function App() {
   const [showCreateItem, setShowCreateItem] = useState(false);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
+  const [showRoadmap, setShowRoadmap] = useState(false);
+  const [showFiles, setShowFiles] = useState(false);
+  const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const [projectName, setProjectName] = useState('');
+  const [projectPath, setProjectPath] = useState('');
   const [setupResult, setSetupResult] = useState<any>(null);
   const [error, setError] = useState('');
 
@@ -65,7 +72,10 @@ export default function App() {
   async function handleCreateProject() {
     if (!projectName.trim()) return;
     try {
-      const result = await createProject({ name: projectName.trim() });
+      const result = await createProject({
+        name: projectName.trim(),
+        localPath: projectPath.trim() || undefined,
+      });
       setSetupResult(result);
     } catch (e: any) {
       setError(e.message);
@@ -164,6 +174,14 @@ export default function App() {
                   placeholder="My Awesome Project"
                   className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-sm"
                 />
+                <label className="block text-sm font-medium text-gray-300 mb-2 mt-3">Local Path (optional)</label>
+                <input
+                  type="text"
+                  value={projectPath}
+                  onChange={(e) => setProjectPath(e.target.value)}
+                  placeholder="/Users/you/projects/myapp"
+                  className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-sm font-mono"
+                />
                 {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
                 <div className="flex gap-2 mt-4">
                   <button
@@ -219,12 +237,35 @@ export default function App() {
               New Item
             </button>
           )}
+          {projectData?.localPath && (
+            <button
+              onClick={() => setShowFiles(true)}
+              className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
+              title="Files"
+            >
+              <FolderOpen className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => setShowRoadmap(prev => !prev)}
+            className={`p-2 transition-colors rounded-lg ${showRoadmap ? 'text-violet-400 bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+            title="Roadmap"
+          >
+            <Map className="w-4 h-4" />
+          </button>
           <button
             onClick={() => setShowActivity(prev => !prev)}
             className={`p-2 transition-colors rounded-lg ${showActivity ? 'text-violet-400 bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
             title="Activity Feed"
           >
             <Activity className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setShowGlobalSettings(true)}
+            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
+            title="Global Settings"
+          >
+            <Settings className="w-4 h-4" />
           </button>
           <button
             onClick={handleLogout}
@@ -244,6 +285,13 @@ export default function App() {
             onItemClick={(id) => setSelectedItemId(id)}
           />
         </main>
+        {showRoadmap && (
+          <Roadmap
+            role={role}
+            onItemClick={(id) => setSelectedItemId(id)}
+            onClose={() => setShowRoadmap(false)}
+          />
+        )}
         {showActivity && (
           <ActivityFeed
             onItemClick={(id) => setSelectedItemId(id)}
@@ -263,6 +311,17 @@ export default function App() {
 
       {showCreateItem && (
         <CreateItemForm onClose={() => setShowCreateItem(false)} />
+      )}
+
+      {showFiles && authMe?.projectId && (
+        <FileBrowser
+          projectId={authMe.projectId}
+          onClose={() => setShowFiles(false)}
+        />
+      )}
+
+      {showGlobalSettings && (
+        <GlobalSettings onClose={() => setShowGlobalSettings(false)} />
       )}
 
       {showProjectSettings && authMe?.projectId && (

@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq, and, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db/connection.js';
-import { items, dependencies, comments, decisionLogs, chatMessages } from '../db/schema.js';
+import { items, dependencies, comments, decisionLogs, chatMessages, itemProgress } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { validateTransition, executeTransition } from '../services/state-machine.js';
 import { assembleContext } from '../services/context.js';
@@ -68,6 +68,7 @@ export async function itemRoutes(app: FastifyInstance) {
       description?: string;
       priority?: string;
       sprintTag?: string;
+      epicId?: string;
       projectId?: string;
     };
 
@@ -82,6 +83,7 @@ export async function itemRoutes(app: FastifyInstance) {
       priority: (body.priority as any) ?? 'medium',
       status: 'draft',
       sprintTag: body.sprintTag ?? null,
+      epicId: body.epicId ?? null,
       createdByRole: request.role,
     }).run();
 
@@ -125,6 +127,7 @@ export async function itemRoutes(app: FastifyInstance) {
     if (body.description !== undefined) updates.description = body.description;
     if (body.priority !== undefined) updates.priority = body.priority;
     if (body.sprintTag !== undefined) updates.sprintTag = body.sprintTag;
+    if (body.epicId !== undefined) updates.epicId = body.epicId;
     if (body.assignedTo !== undefined) updates.assignedTo = body.assignedTo;
 
     db.update(items).set(updates).where(eq(items.id, id)).run();
@@ -150,6 +153,7 @@ export async function itemRoutes(app: FastifyInstance) {
     }
 
     // Delete related records first
+    db.delete(itemProgress).where(eq(itemProgress.itemId, id)).run();
     db.delete(chatMessages).where(eq(chatMessages.itemId, id)).run();
     db.delete(decisionLogs).where(eq(decisionLogs.itemId, id)).run();
     db.delete(dependencies).where(eq(dependencies.itemId, id)).run();
@@ -159,6 +163,51 @@ export async function itemRoutes(app: FastifyInstance) {
 
     broadcast('item:deleted', { id });
     return { ok: true };
+  });
+
+  // Report progress on item
+  app.post('/api/items/:id/progress', { preHandler: authMiddleware }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { percent?: number; step: string; log?: string };
+
+    if (!body.step) return reply.status(400).send({ error: 'step is required' });
+
+    const item = db.select().from(items).where(
+      and(eq(items.id, id), eq(items.projectId, request.projectId))
+    ).get();
+    if (!item) return reply.status(404).send({ error: 'Item not found' });
+
+    const percent = Math.max(0, Math.min(100, body.percent ?? 0));
+
+    // Upsert progress
+    const existing = db.select().from(itemProgress).where(eq(itemProgress.itemId, id)).get();
+    if (existing) {
+      db.update(itemProgress).set({
+        percent,
+        step: body.step,
+        log: body.log ?? null,
+        updatedAt: new Date().toISOString(),
+      }).where(eq(itemProgress.itemId, id)).run();
+    } else {
+      db.insert(itemProgress).values({
+        itemId: id,
+        percent,
+        step: body.step,
+        log: body.log ?? null,
+      }).run();
+    }
+
+    const progress = db.select().from(itemProgress).where(eq(itemProgress.itemId, id)).get();
+    broadcast('progress:updated', { itemId: id, ...progress });
+    return progress;
+  });
+
+  // Get progress for item
+  app.get('/api/items/:id/progress', { preHandler: authMiddleware }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const progress = db.select().from(itemProgress).where(eq(itemProgress.itemId, id)).get();
+    if (!progress) return reply.status(404).send({ error: 'No progress reported' });
+    return progress;
   });
 
   // Transition item

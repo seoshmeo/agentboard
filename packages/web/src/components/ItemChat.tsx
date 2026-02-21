@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bot, Send, User } from 'lucide-react';
 import { useChatMessages, useSendChatMessage } from '../api/client.js';
+import { Markdown } from './Markdown.js';
 import { cn, ROLE_BADGE_COLORS, relativeTime } from '../lib/utils.js';
 import type { Role } from '@agentboard/shared';
 
@@ -63,7 +64,7 @@ export function ItemChat({ itemId, role }: ItemChatProps) {
               )}
               <span className="text-[10px] text-gray-600">{relativeTime(msg.createdAt)}</span>
             </div>
-            <p className="text-gray-300 whitespace-pre-wrap">{msg.content}</p>
+            <Markdown content={msg.content} />
           </div>
         ))}
         {sendMessage.isPending && (

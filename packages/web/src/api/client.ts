@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Item, Project, DecisionLog, Comment, ItemContext, CreateProjectResponse, TransitionRequest, Role } from '@agentboard/shared';
+import type { Item, Project, DecisionLog, Comment, ItemContext, CreateProjectResponse, TransitionRequest, Role, Epic, ItemProgress, FileEntry } from '@agentboard/shared';
 
 const API_BASE = '/api';
 
@@ -63,7 +63,7 @@ export function useProject(id: string) {
   });
 }
 
-export async function createProject(data: { name: string; description?: string }): Promise<CreateProjectResponse> {
+export async function createProject(data: { name: string; description?: string; localPath?: string }): Promise<CreateProjectResponse> {
   const res = await fetch(`${API_BASE}/projects`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -79,7 +79,7 @@ export async function createProject(data: { name: string; description?: string }
 export function useUpdateProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string; name?: string; description?: string; anthropicApiKey?: string; telegramBotToken?: string; telegramChatId?: string }) =>
+    mutationFn: ({ id, ...data }: { id: string; name?: string; description?: string; anthropicApiKey?: string; telegramBotToken?: string; telegramChatId?: string; localPath?: string }) =>
       apiFetch<Project>(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['project', vars.id] }),
   });
@@ -134,18 +134,24 @@ export function useItemContext(id: string) {
 export function useCreateItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { title: string; description?: string; priority?: string; sprintTag?: string }) =>
+    mutationFn: (data: { title: string; description?: string; priority?: string; sprintTag?: string; epicId?: string }) =>
       apiFetch<Item>('/items', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['items'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['items'] });
+      qc.invalidateQueries({ queryKey: ['epics'] });
+    },
   });
 }
 
 export function useUpdateItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string; title?: string; description?: string; priority?: string; sprintTag?: string; assignedTo?: string }) =>
+    mutationFn: ({ id, ...data }: { id: string; title?: string; description?: string; priority?: string; sprintTag?: string; epicId?: string | null; assignedTo?: string }) =>
       apiFetch<Item>(`/items/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['items'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['items'] });
+      qc.invalidateQueries({ queryKey: ['epics'] });
+    },
   });
 }
 
@@ -251,6 +257,98 @@ export function useAuthMe() {
     queryFn: () => apiFetch<{ role: Role; projectId: string }>('/auth/me'),
     enabled: !!getApiKey(),
     retry: false,
+  });
+}
+
+// Progress
+export function useItemProgress(itemId: string) {
+  return useQuery({
+    queryKey: ['progress', itemId],
+    queryFn: () => apiFetch<ItemProgress>(`/items/${itemId}/progress`),
+    enabled: !!itemId,
+    retry: false,
+  });
+}
+
+// Epics
+export type EpicWithCounts = Epic & { itemCounts: Record<string, number>; totalItems: number };
+
+export function useEpics() {
+  return useQuery({
+    queryKey: ['epics'],
+    queryFn: () => apiFetch<EpicWithCounts[]>('/epics'),
+    enabled: !!getApiKey(),
+  });
+}
+
+export function useCreateEpic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { title: string; description?: string; status?: string; sortOrder?: number }) =>
+      apiFetch<Epic>('/epics', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['epics'] }),
+  });
+}
+
+export function useUpdateEpic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; title?: string; description?: string; status?: string; sortOrder?: number }) =>
+      apiFetch<Epic>(`/epics/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['epics'] }),
+  });
+}
+
+export function useDeleteEpic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiFetch(`/epics/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['epics'] });
+      qc.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
+}
+
+// Files
+export function useFileTree(projectId: string, path?: string) {
+  return useQuery({
+    queryKey: ['files', projectId, path || ''],
+    queryFn: () => {
+      const params = path ? `?path=${encodeURIComponent(path)}` : '';
+      return apiFetch<{ root: string; tree: FileEntry[] }>(`/projects/${projectId}/files${params}`);
+    },
+    enabled: !!projectId && !!getApiKey(),
+    retry: false,
+  });
+}
+
+export function useFileContent(projectId: string, path: string) {
+  return useQuery({
+    queryKey: ['fileContent', projectId, path],
+    queryFn: () => apiFetch<{ path: string; content: string; language: string; size: number }>(
+      `/projects/${projectId}/files/content?path=${encodeURIComponent(path)}`
+    ),
+    enabled: !!projectId && !!path && !!getApiKey(),
+    retry: false,
+  });
+}
+
+// Settings
+export function useSettings() {
+  return useQuery({
+    queryKey: ['settings'],
+    queryFn: () => apiFetch<Record<string, string | boolean>>('/settings'),
+    staleTime: 60000,
+  });
+}
+
+export function useUpdateSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, string | null>) =>
+      apiFetch('/settings', { method: 'PATCH', body: JSON.stringify(data) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['settings'] }),
   });
 }
 

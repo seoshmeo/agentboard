@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAddDecisionLog } from '../api/client.js';
+import { Markdown } from './Markdown.js';
 import type { DecisionLog as DecisionLogType } from '@agentboard/shared';
 
 interface DecisionLogProps {
@@ -59,19 +60,19 @@ export function DecisionLog({ itemId, logs, canAdd = true }: DecisionLogProps) {
               {expandedLog === log.id && (
                 <div className="px-3 pb-3 space-y-2 text-xs">
                   <div>
-                    <span className="font-semibold text-gray-400">Context: </span>
-                    <span className="text-gray-300">{log.context}</span>
+                    <span className="font-semibold text-gray-400 block mb-0.5">Context:</span>
+                    <Markdown content={log.context} />
                   </div>
                   {log.alternatives && (
                     <div>
-                      <span className="font-semibold text-gray-400">Alternatives: </span>
-                      <span className="text-gray-300">{log.alternatives}</span>
+                      <span className="font-semibold text-gray-400 block mb-0.5">Alternatives:</span>
+                      <Markdown content={log.alternatives} />
                     </div>
                   )}
                   {log.consequences && (
                     <div>
-                      <span className="font-semibold text-gray-400">Consequences: </span>
-                      <span className="text-gray-300">{log.consequences}</span>
+                      <span className="font-semibold text-gray-400 block mb-0.5">Consequences:</span>
+                      <Markdown content={log.consequences} />
                     </div>
                   )}
                 </div>

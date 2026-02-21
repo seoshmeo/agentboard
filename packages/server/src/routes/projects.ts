@@ -9,11 +9,11 @@ import type { Role } from '@agentboard/shared';
 export async function projectRoutes(app: FastifyInstance) {
   // Create project — no auth required (bootstrapping)
   app.post('/api/projects', async (request, reply) => {
-    const { name, description } = request.body as { name: string; description?: string };
+    const { name, description, localPath } = request.body as { name: string; description?: string; localPath?: string };
     if (!name) return reply.status(400).send({ error: 'name is required' });
 
     const projectId = nanoid();
-    db.insert(projects).values({ id: projectId, name, description: description ?? null }).run();
+    db.insert(projects).values({ id: projectId, name, description: description ?? null, localPath: localPath ?? null }).run();
 
     const roles: Role[] = ['pm', 'dev', 'human'];
     const keys = roles.map(role => ({
@@ -34,7 +34,7 @@ export async function projectRoutes(app: FastifyInstance) {
 
   // List all projects (for project switcher)
   app.get('/api/projects', async () => {
-    return db.select({ id: projects.id, name: projects.name, createdAt: projects.createdAt })
+    return db.select({ id: projects.id, name: projects.name, localPath: projects.localPath, createdAt: projects.createdAt })
       .from(projects).all();
   });
 
@@ -65,6 +65,7 @@ export async function projectRoutes(app: FastifyInstance) {
     if (body.anthropicApiKey !== undefined) updates.anthropicApiKey = body.anthropicApiKey;
     if (body.telegramBotToken !== undefined) updates.telegramBotToken = body.telegramBotToken;
     if (body.telegramChatId !== undefined) updates.telegramChatId = body.telegramChatId;
+    if (body.localPath !== undefined) updates.localPath = body.localPath;
 
     db.update(projects).set(updates).where(eq(projects.id, id)).run();
     return db.select().from(projects).where(eq(projects.id, id)).get();
