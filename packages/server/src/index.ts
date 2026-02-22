@@ -1,5 +1,8 @@
+import { fileURLToPath } from 'url';
+import path from 'path';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import websocket from '@fastify/websocket';
 import { runMigrations } from './db/migrate.js';
 import { healthRoutes } from './routes/health.js';
@@ -49,6 +52,16 @@ await app.register(fileRoutes);
 await app.register(settingsRoutes);
 await app.register(demoRoutes);
 await app.register(wsRoutes);
+
+// Serve frontend static files in production
+if (process.env.NODE_ENV === 'production') {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const webDist = path.resolve(__dirname, '../../web/dist');
+  await app.register(fastifyStatic, { root: webDist, wildcard: false });
+  app.setNotFoundHandler((_req, reply) => {
+    reply.sendFile('index.html');
+  });
+}
 
 const port = parseInt(process.env.PORT || '3000', 10);
 const host = process.env.HOST || '0.0.0.0';

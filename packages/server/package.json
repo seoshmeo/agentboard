@@ -12,6 +12,7 @@
   "dependencies": {
     "@agentboard/shared": "workspace:*",
     "@fastify/cors": "^10.0.0",
+    "@fastify/static": "^9.0.0",
     "@fastify/websocket": "^11.0.0",
     "better-sqlite3": "^11.0.0",
     "drizzle-orm": "^0.38.0",
