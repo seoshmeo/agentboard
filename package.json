@@ -8,7 +8,7 @@
     "dev:server": "pnpm --filter @agentboard/server dev",
     "dev:web": "pnpm --filter @agentboard/web dev",
     "dev": "pnpm run dev:server & pnpm run dev:web",
-    "build": "pnpm --filter @agentboard/shared build && pnpm --filter @agentboard/web build",
+    "build": "pnpm --filter @agentboard/shared build && pnpm --filter @agentboard/web build && pwd && ls -la packages/web/ && cp -r packages/web/dist ./dist",
     "build:all": "pnpm --filter @agentboard/shared build && pnpm --filter @agentboard/server build && pnpm --filter @agentboard/web build",
     "build:shared": "pnpm --filter @agentboard/shared build",
     "test": "pnpm --filter @agentboard/shared test && pnpm --filter @agentboard/server test"

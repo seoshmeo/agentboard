@@ -1,5 +1,4 @@
 {
-  "buildCommand": "pnpm --filter @agentboard/shared build && pnpm --filter @agentboard/web build && cp -r packages/web/dist dist",
   "outputDirectory": "dist",
   "installCommand": "pnpm install",
   "rewrites": [
