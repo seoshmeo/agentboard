@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm build:shared && pnpm --filter @agentboard/web build",
+  "buildCommand": "pnpm --filter @agentboard/shared build && pnpm --filter @agentboard/web build",
   "outputDirectory": "packages/web/dist",
   "installCommand": "pnpm install",
   "framework": "vite",
