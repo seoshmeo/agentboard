@@ -12,8 +12,9 @@ import { GlobalSettings } from './components/GlobalSettings.js';
 import { Sidebar, type Page } from './components/Sidebar.js';
 import { ProjectsPage } from './components/ProjectsPage.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
-import { useItems, useAuthMe, useProject, setApiKey, getStoredApiKey, clearApiKey, createProject } from './api/client.js';
-import { Plus, Zap, KeyRound, Sun, Moon } from 'lucide-react';
+import { useItems, useAuthMe, useProject, setApiKey, getStoredApiKey, clearApiKey, createProject, createDemoProject, saveProjectKey } from './api/client.js';
+import { Plus, Zap, KeyRound, Sun, Moon, Play, FolderOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { relativeTime } from './lib/utils.js';
 import { useTheme } from './hooks/useTheme.js';
 import type { Role } from '@agentboard/shared';
 
@@ -38,7 +39,10 @@ export default function App() {
   const [projectPath, setProjectPath] = useState('');
   const [setupResult, setSetupResult] = useState<any>(null);
   const [error, setError] = useState('');
+  const [demoLoading, setDemoLoading] = useState(false);
   const [activePage, setActivePage] = useState<Page>('board');
+  const [existingProjects, setExistingProjects] = useState<{ id: string; name: string; humanKey: string | null; createdAt: string | null }[]>([]);
+  const [showExistingProjects, setShowExistingProjects] = useState(false);
 
   const queryClient = useQueryClient();
   const { theme, toggleTheme } = useTheme();
@@ -54,6 +58,13 @@ export default function App() {
       setError('Invalid API key or server error');
     }
   }, [isError, apiKey]);
+
+  // Fetch existing projects for login screen (no auth needed)
+  useEffect(() => {
+    if (!apiKey) {
+      fetch('/api/projects').then(r => r.ok ? r.json() : []).then(setExistingProjects).catch(() => {});
+    }
+  }, [apiKey]);
 
   function handleLogin() {
     if (!keyInput.trim()) return;
@@ -81,6 +92,32 @@ export default function App() {
       setSetupResult(result);
     } catch (e: any) {
       setError(e.message);
+    }
+  }
+
+  function handleOpenProject(humanKey: string | null) {
+    if (!humanKey) {
+      setError('No API key found for this project');
+      return;
+    }
+    saveProjectKey('_last', humanKey);
+    setApiKey(humanKey);
+    setKey(humanKey);
+    queryClient.invalidateQueries();
+  }
+
+  async function handleTryDemo() {
+    setDemoLoading(true);
+    setError('');
+    try {
+      const { humanKey } = await createDemoProject();
+      setApiKey(humanKey);
+      setKey(humanKey);
+      queryClient.invalidateQueries();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setDemoLoading(false);
     }
   }
 
@@ -145,6 +182,49 @@ export default function App() {
                     <Plus className="w-4 h-4" />
                     Create New Project
                   </button>
+                </div>
+                {existingProjects.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-800">
+                    <button
+                      onClick={() => setShowExistingProjects(!showExistingProjects)}
+                      className="w-full py-2 text-gray-400 hover:text-white text-sm transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <FolderOpen className="w-4 h-4" />
+                      Open Existing Project ({existingProjects.length})
+                      {showExistingProjects ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+                    {showExistingProjects && (
+                      <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto">
+                        {existingProjects.map(proj => (
+                          <div key={proj.id} className="bg-gray-800 rounded-lg p-2.5 flex items-center justify-between">
+                            <div className="min-w-0 flex-1">
+                              <span className="text-sm text-white truncate block">{proj.name}</span>
+                              {proj.createdAt && (
+                                <p className="text-[10px] text-gray-500">{relativeTime(proj.createdAt)}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleOpenProject(proj.humanKey)}
+                              className="shrink-0 px-2.5 py-1 text-xs font-medium rounded-md transition-colors bg-violet-600 hover:bg-violet-500 text-white"
+                            >
+                              Open
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="mt-3 pt-3 border-t border-gray-800">
+                  <button
+                    onClick={handleTryDemo}
+                    disabled={demoLoading}
+                    className="w-full py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Play className="w-4 h-4" />
+                    {demoLoading ? 'Creating demo...' : 'Try Demo'}
+                  </button>
+                  <p className="text-center text-gray-500 text-xs mt-1.5">Explore with sample data, no signup needed</p>
                 </div>
               </>
             ) : setupResult ? (

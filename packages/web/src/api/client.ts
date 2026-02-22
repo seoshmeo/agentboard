@@ -88,6 +88,12 @@ export async function createProject(data: { name: string; description?: string; 
   return res.json();
 }
 
+export async function createDemoProject(): Promise<{ humanKey: string }> {
+  const res = await fetch(`${API_BASE}/demo`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to create demo');
+  return res.json();
+}
+
 export function useUpdateProject() {
   const qc = useQueryClient();
   return useMutation({

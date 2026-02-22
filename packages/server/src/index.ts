@@ -13,6 +13,8 @@ import { fileRoutes } from './routes/files.js';
 import { settingsRoutes } from './routes/settings.js';
 import { wsRoutes } from './ws/index.js';
 import { startAgentWorker } from './services/agent-worker.js';
+import { demoRoutes } from './routes/demo.js';
+import { startDemoCleanup } from './services/demo-cleanup.js';
 
 const app = Fastify({ logger: true });
 
@@ -45,6 +47,7 @@ await app.register(chatRoutes);
 await app.register(epicRoutes);
 await app.register(fileRoutes);
 await app.register(settingsRoutes);
+await app.register(demoRoutes);
 await app.register(wsRoutes);
 
 const port = parseInt(process.env.PORT || '3000', 10);
@@ -54,6 +57,7 @@ try {
   await app.listen({ port, host });
   console.log(`AgentBoard server running on http://${host}:${port}`);
   startAgentWorker();
+  startDemoCleanup();
 } catch (err) {
   app.log.error(err);
   process.exit(1);

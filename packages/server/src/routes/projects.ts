@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db/connection.js';
 import { projects, apiKeys } from '../db/schema.js';
@@ -34,8 +34,17 @@ export async function projectRoutes(app: FastifyInstance) {
 
   // List all projects (for project switcher)
   app.get('/api/projects', async () => {
-    return db.select({ id: projects.id, name: projects.name, localPath: projects.localPath, createdAt: projects.createdAt })
+    const allProjects = db.select({ id: projects.id, name: projects.name, description: projects.description, localPath: projects.localPath, createdAt: projects.createdAt })
       .from(projects).all();
+
+    // Attach human key for each project (local dev tool, no secrets)
+    return allProjects.map(p => {
+      const humanKeyRow = db.select({ key: apiKeys.key })
+        .from(apiKeys)
+        .where(and(eq(apiKeys.projectId, p.id), eq(apiKeys.role, 'human')))
+        .get();
+      return { ...p, humanKey: humanKeyRow?.key ?? null };
+    });
   });
 
   // Get project
