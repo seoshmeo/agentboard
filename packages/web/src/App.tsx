@@ -13,7 +13,7 @@ import { Sidebar, type Page } from './components/Sidebar.js';
 import { ProjectsPage } from './components/ProjectsPage.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
 import { useItems, useAuthMe, useProject, setApiKey, getStoredApiKey, clearApiKey, createProject, createDemoProject, saveProjectKey } from './api/client.js';
-import { Plus, Zap, KeyRound, Sun, Moon, Play, FolderOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Zap, KeyRound, Sun, Moon, Play, FolderOpen } from 'lucide-react';
 import { relativeTime } from './lib/utils.js';
 import { useTheme } from './hooks/useTheme.js';
 import type { Role } from '@agentboard/shared';
@@ -42,7 +42,6 @@ export default function App() {
   const [demoLoading, setDemoLoading] = useState(false);
   const [activePage, setActivePage] = useState<Page>('board');
   const [existingProjects, setExistingProjects] = useState<{ id: string; name: string; humanKey: string | null; createdAt: string | null }[]>([]);
-  const [showExistingProjects, setShowExistingProjects] = useState(false);
 
   const queryClient = useQueryClient();
   const { theme, toggleTheme } = useTheme();
@@ -184,35 +183,28 @@ export default function App() {
                   </button>
                 </div>
                 {existingProjects.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-800">
-                    <button
-                      onClick={() => setShowExistingProjects(!showExistingProjects)}
-                      className="w-full py-2 text-gray-400 hover:text-white text-sm transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <FolderOpen className="w-4 h-4" />
-                      Open Existing Project ({existingProjects.length})
-                      {showExistingProjects ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                    </button>
-                    {showExistingProjects && (
-                      <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto">
-                        {existingProjects.map(proj => (
-                          <div key={proj.id} className="bg-gray-800 rounded-lg p-2.5 flex items-center justify-between">
-                            <div className="min-w-0 flex-1">
-                              <span className="text-sm text-white truncate block">{proj.name}</span>
-                              {proj.createdAt && (
-                                <p className="text-[10px] text-gray-500">{relativeTime(proj.createdAt)}</p>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => handleOpenProject(proj.humanKey)}
-                              className="shrink-0 px-2.5 py-1 text-xs font-medium rounded-md transition-colors bg-violet-600 hover:bg-violet-500 text-white"
-                            >
-                              Open
-                            </button>
+                  <div className="mt-4 pt-4 border-t border-gray-800">
+                    <p className="text-xs font-medium text-gray-400 mb-2 flex items-center gap-1.5">
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      Your Projects
+                    </p>
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                      {existingProjects.map(proj => (
+                        <button
+                          key={proj.id}
+                          onClick={() => handleOpenProject(proj.humanKey)}
+                          className="w-full bg-gray-800 hover:bg-gray-750 hover:border-violet-500/40 border border-gray-700 rounded-lg p-3 flex items-center justify-between transition-colors text-left"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <span className="text-sm text-white truncate block">{proj.name}</span>
+                            {proj.createdAt && (
+                              <p className="text-[10px] text-gray-500">{relativeTime(proj.createdAt)}</p>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          <span className="shrink-0 text-xs text-violet-400 font-medium">Open →</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
                 <div className="mt-3 pt-3 border-t border-gray-800">
