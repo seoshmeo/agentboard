@@ -26,14 +26,15 @@ const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:5173,http
   .map(o => o.trim());
 
 await app.register(cors, {
-  origin: (origin, cb) => {
-    // Allow requests with no origin (curl, server-to-server, mobile apps)
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Not allowed by CORS'), false);
-    }
-  },
+  origin: process.env.NODE_ENV === 'production'
+    ? true
+    : (origin, cb) => {
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Not allowed by CORS'), false);
+        }
+      },
 });
 await app.register(websocket);
 
