@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm --filter @agentboard/shared build && pnpm --filter @agentboard/web build",
-  "outputDirectory": "packages/web/dist",
+  "buildCommand": "pnpm --filter @agentboard/shared build && pnpm --filter @agentboard/web build && cp -r packages/web/dist dist",
+  "outputDirectory": "dist",
   "installCommand": "pnpm install",
   "rewrites": [
     { "source": "/api/:path*", "destination": "http://161.35.157.202:3001/api/:path*" },
