@@ -1,7 +1,15 @@
 {
-  "buildCommand": "pnpm --filter @agentboard/shared build && pnpm --filter @agentboard/web build",
-  "outputDirectory": "packages/web/dist",
+  "version": 2,
   "installCommand": "pnpm install",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "packages/web/dist"
+      }
+    }
+  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "http://161.35.157.202:3001/api/:path*" },
     { "source": "/ws", "destination": "http://161.35.157.202:3001/ws" }
