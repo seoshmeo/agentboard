@@ -2,7 +2,7 @@
   "buildCommand": "pnpm --filter @agentboard/shared build && pnpm --filter @agentboard/web build",
   "outputDirectory": "packages/web/dist",
   "installCommand": "pnpm install",
-  "framework": "vite",
+  "framework": null,
   "rewrites": [
     { "source": "/api/:path*", "destination": "http://161.35.157.202:3001/api/:path*" },
     { "source": "/ws", "destination": "http://161.35.157.202:3001/ws" }
