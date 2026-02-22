@@ -12,7 +12,7 @@ import { GlobalSettings } from './components/GlobalSettings.js';
 import { Sidebar, type Page } from './components/Sidebar.js';
 import { ProjectsPage } from './components/ProjectsPage.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
-import { useItems, useAuthMe, useProject, setApiKey, getStoredApiKey, clearApiKey, createProject, createDemoProject, saveProjectKey } from './api/client.js';
+import { useItems, useAuthMe, useProject, setApiKey, getStoredApiKey, clearApiKey, createProject, createDemoProject, saveProjectKey, trackEvent } from './api/client.js';
 import { Plus, Zap, KeyRound, Sun, Moon, Play, FolderOpen } from 'lucide-react';
 import { relativeTime } from './lib/utils.js';
 import { useTheme } from './hooks/useTheme.js';
@@ -61,12 +61,14 @@ export default function App() {
   // Fetch existing projects for login screen (no auth needed)
   useEffect(() => {
     if (!apiKey) {
+      trackEvent('page_view');
       fetch('/api/projects').then(r => r.ok ? r.json() : []).then(setExistingProjects).catch(() => {});
     }
   }, [apiKey]);
 
   function handleLogin() {
     if (!keyInput.trim()) return;
+    trackEvent('connect_click');
     setApiKey(keyInput.trim());
     setKey(keyInput.trim());
     setError('');
@@ -99,6 +101,7 @@ export default function App() {
       setError('No API key found for this project');
       return;
     }
+    trackEvent('open_project_click');
     saveProjectKey('_last', humanKey);
     setApiKey(humanKey);
     setKey(humanKey);
@@ -106,6 +109,7 @@ export default function App() {
   }
 
   async function handleTryDemo() {
+    trackEvent('try_demo_click');
     setDemoLoading(true);
     setError('');
     try {

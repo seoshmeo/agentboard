@@ -94,6 +94,14 @@ export async function createDemoProject(): Promise<{ humanKey: string }> {
   return res.json();
 }
 
+export function trackEvent(event: string) {
+  fetch(`${API_BASE}/track`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event }),
+  }).catch(() => {});
+}
+
 export function useUpdateProject() {
   const qc = useQueryClient();
   return useMutation({
